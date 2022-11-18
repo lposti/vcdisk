@@ -36,11 +36,13 @@ import numpy as np
 from scipy.integrate import simps
 from scipy.special import ellipk, ellipe, i0, i1, k0, k1
 
+# constants
+G_GRAV = 4.301e-6 # kpc km^2 s^-2 M_sun^-1
 
 # exponential disc circular velocity
 def vc_razorthin(R, Md, Rd):
     y = R/2./Rd
-    return np.nan_to_num(np.sqrt(2*4.301e-6*Md/Rd*y**2*(i0(y)*k0(y)-i1(y)*k1(y))))
+    return np.nan_to_num(np.sqrt(2*G_GRAV*Md/Rd*y**2*(i0(y)*k0(y)-i1(y)*k1(y))))
 
 
 def _integrand(rad, r, smdisc, xxii, z0=0.3, verbose=False):
@@ -58,8 +60,7 @@ def _integrand(rad, r, smdisc, xxii, z0=0.3, verbose=False):
     return 2/np.pi*np.sqrt(u/r*p) * (ellipk(p) - ellipe(p)) * drho_du
 
 def get_vstar_disc(RR, LL, z0=0.3):
-    G = 4.301e-6
     _rr, xxii = np.linspace(RR.min(), RR.max(), 100), np.logspace(-2,3,1000)
     smdisc = np.interp(_rr, RR, LL)
-    return np.array([np.sqrt(-4*np.pi*G*r*simps(simps(_integrand(_rr, r, smdisc, xxii, z0=z0).T, xxii), _rr))
+    return np.array([np.sqrt(-4*np.pi*G_GRAV*r*simps(simps(_integrand(_rr, r, smdisc, xxii, z0=z0).T, xxii), _rr))
                      for r in RR])
