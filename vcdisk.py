@@ -27,6 +27,7 @@ Reference/API
 
 __all__ = [
     'vcdisk',
+    '_integrand',
     'vc_thin_expdisk',
 ]
 
