@@ -6,6 +6,8 @@ from vcdisk import vcdisk
 rad = np.logspace(-1, 1.5, 100)
 md, rd = 1e10, 1.0
 sb  = md / (2*np.pi*rd**2) * np.exp(-rad/rd)
+rhoz_simple = lambda x: x**-2
+rhoz_compl  = lambda x,t: t*x**-2
 
 def test_inputs():
     # input rad, sb
@@ -32,6 +34,14 @@ def test_inputs():
     with pytest.raises(TypeError):
         vcdisk(rad, sb, rsamp=rad)
 
+    # input rhoz
+    with pytest.raises(TypeError):
+        vcdisk(rad, sb, rhoz='no')
+
+    # input rhoz_args
+    with pytest.raises(TypeError):
+        vcdisk(rad, sb, rhoz=rhoz_simple, rhoz_args=0)
+
 def test_output_type():
     assert type(vcdisk(rad, sb)) is np.ndarray
     assert type(vcdisk(rad, sb, z0=1)) is np.ndarray
@@ -43,3 +53,7 @@ def test_output_type():
     assert type(vcdisk(rad, sb, rsamp='log')) is np.ndarray
     assert type(vcdisk(rad, sb, rsamp='lin')) is np.ndarray
     assert type(vcdisk(rad, sb, rsamp='nat')) is np.ndarray
+    assert type(vcdisk(rad, sb, rhoz='cosh')) is np.ndarray
+    assert type(vcdisk(rad, sb, rhoz='exp')) is np.ndarray
+    assert type(vcdisk(rad, sb, rhoz=rhoz_simple)) is np.ndarray
+    assert type(vcdisk(rad, sb, rhoz=rhoz_compl, rhoz_args={"t":1.0})) is np.ndarray
