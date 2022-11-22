@@ -19,3 +19,6 @@ venv.bak/
 
 # Coverage
 .coverage
+
+# Docs
+docs/build/
