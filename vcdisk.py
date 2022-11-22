@@ -39,11 +39,6 @@ from scipy.special import ellipk, ellipe, i0, i1, k0, k1
 # constants
 G_GRAV = 4.301e-6 # kpc km^2 s^-2 M_sun^-1
 
-# circular velocity of a razor-thin exponential disk
-def vc_thin_expdisk(R, Md, Rd):
-    y = R/2./Rd
-    return np.nan_to_num(np.sqrt(2*G_GRAV*Md/Rd*y**2*(i0(y)*k0(y)-i1(y)*k1(y))))
-
 def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log'):
     """
     Calculate the circular velocity of a thick disk of arbitrary
@@ -148,9 +143,9 @@ def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log
 
 def _integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None):
     """
-    Integrand in Eq 4 of Casertano (1983, MNRAS, 203, 735).
-    Note that here I actually use the notation of Eq A17, which is
-    equivalent to Eq 4.
+    Integrand in Eq. (4) of Casertano (1983, MNRAS, 203, 735).
+    Note that here I actually use the notation of Eq. (A17), which is
+    equivalent to Eq. (4).
     This function is called by the main function :py:func:`vcdisk`.
 
     :param u: radial variable of integration.
@@ -204,3 +199,45 @@ def _integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None):
     drho_du = np.gradient(rho_uz, u, axis=1)
 
     return 2/np.pi*np.sqrt(u/r*p) * (ellipk(p) - ellipe(p)) * drho_du
+
+
+def vc_thin_expdisk(R, Md, Rd):
+    """
+    Circular velocity of an infinitely thin exponential disk.
+    This result was first derived by Freeman (1970), ApJ, 160, 811,
+    see their Eq. (10).
+
+    :param R: radii in kpc where to calculate V_circ.
+    :type R: float or list or np.array.
+    :param Md: disk mass in M_sun.
+    :type Md: float.
+    :param Rd: exponential scale-length of the disk in kpc
+    :type Rd: float.
+
+    :return: 1-D array (same shape as R) of the circular velocities
+        in km / s.
+    :rtype: float or np.array.
+
+    """
+
+    # checks on input
+    if type(R) is list: R = np.asarray(R)
+    if type(R) is np.ndarray:
+        pass
+    else:
+        try:
+            assert type(float(R)) is float
+        except:
+            raise TypeError("R must be a float scalar, a list of floats or a np.array")
+
+    if type(R) is np.ndarray and len(R)<1:
+        raise ValueError("the size of the R array must be >0")
+
+    try:
+        assert type(float(Md)) is float
+        assert type(float(Rd)) is float
+    except:
+        raise TypeError("Md and Rd must be float scalars")
+
+    y = R/2./Rd
+    return np.nan_to_num(np.sqrt(2*G_GRAV*Md/Rd*y**2*(i0(y)*k0(y)-i1(y)*k1(y))))

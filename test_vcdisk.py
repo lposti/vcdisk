@@ -44,9 +44,27 @@ def test_inputs():
     with pytest.raises(TypeError):
         vcdisk(rad, sb, rhoz=rhoz_simple, rhoz_args=0)
 
+
+    #-----------------------------
+    # input R
+    with pytest.raises(TypeError):
+        vc_thin_expdisk('o',md,rd)
+    with pytest.raises(ValueError):
+        vc_thin_expdisk([],md,rd)
+
+    # input Md and Rd
+    with pytest.raises(TypeError):
+        vc_thin_expdisk(rad,'o',rd)
+    with pytest.raises(TypeError):
+        vc_thin_expdisk(rad,md,'o')
+
+
 def test_output_type():
     assert type(vc_thin_expdisk(rad, md, rd)) is np.ndarray
+    assert type(vc_thin_expdisk(1, md, rd)) is np.float64
+    assert type(vc_thin_expdisk(list(rad), md, rd)) is np.ndarray
 
+    #-----------------------------
     assert type(vcdisk(rad, sb)) is np.ndarray
     assert type(vcdisk(list(rad), list(sb))) is np.ndarray
     assert type(vcdisk(rad, sb, z0=1)) is np.ndarray
