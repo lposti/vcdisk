@@ -28,7 +28,6 @@ Reference/API
 __all__ = [
     'vcdisk',
     'vc_thin_expdisk',
-    '_integrand',
 ]
 
 
@@ -42,8 +41,10 @@ G_GRAV = 4.301e-6 # kpc km^2 s^-2 M_sun^-1
 def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log'):
     """
     Calculate the circular velocity of a thick disk of arbitrary
-    surface density using the method of Casertano (1983, MNRAS, 203, 735).
+    surface density using the method of Casertano (1983, [1]_).
 
+    Parameters
+    ----------
     :param rad: array of radii in kpc.
     :type rad: list or np.array.
     :param sb: array of surface densities in M_sun / kpc^2.
@@ -71,11 +72,44 @@ def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log
         spacing of the data in input rad.
     :type rsamp: optional|str
     :type rhoz_args: optional|dict.
-    :raise lumache.InvalidKindError: If the kind is invalid.
+
+    Returns
+    -------
     :return: array of V_star velocities in km / s.
     :rtype: np.array.
 
+    Example
+    -------
+
+    >>> import numpy as np.
+    >>> from vcdisk import vcdisk
+    >>> md, rd = 1e10, 2.0
+    >>> r = np.linspace(0.1, 30.0, 50)
+    >>> sb = md / (2*np.pi*rd**2) * np.exp(-r/rd)
+    >>> vc = vcdisk(r, sb)
+
+    Notes
+    -----
+    The circular velocity on the mid-plane of a disk can be written as
+    :math:`V_{\rm disk}(r) = \sqrt{-r\,F_{r,\rm disk}(r)` where :math:`F_{r,\rm disk}(r)`
+    is the radial force on the plane of the disk. The radial force can be
+    calculated as
+
+    .. math::
+
+        F_{r,\rm disk}(r) = 4\pi G \int_0^\infty \mathrm{d}u \int_0^\infty \mathrm{d}z \,\,2\sqrt{\frac{u}{rp}} \,\frac{\mathcal{K}(p)-\mathcal{E}(p)}{\pi}\, \frac{\partial \rho(u,z)}{\partial u},
+
+    where :math:`p = x-\sqrt{x^2-a}` and :math:`x = (r^2+u^2+z^2)/(2ru)` (see Eqs. 4-5-6
+    in [1]_).
+
+    References
+    ----------
+    .. [1] Casertano, 1983, MNRAS, 203, 735. Rotation curve of the edge-on spiral
+    galaxy NGC 5907 : disc and halo masses. doi:10.1093/mnras/203.3.735
+
+
     """
+
 
     ################
     # input checks #
