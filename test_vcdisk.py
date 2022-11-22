@@ -18,6 +18,8 @@ def test_inputs():
     with pytest.raises(TypeError):
         vcdisk(0, sb)
     with pytest.raises(ValueError):
+        vcdisk(rad, [])
+    with pytest.raises(ValueError):
         vcdisk(rad, np.ones(len(rad)+1))
 
     # input z0
@@ -46,6 +48,7 @@ def test_output_type():
     assert type(vc_thin_expdisk(rad, md, rd)) is np.ndarray
 
     assert type(vcdisk(rad, sb)) is np.ndarray
+    assert type(vcdisk(list(rad), list(sb))) is np.ndarray
     assert type(vcdisk(rad, sb, z0=1)) is np.ndarray
     assert type(vcdisk(rad, sb, z0=1.0)) is np.ndarray
     assert type(vcdisk(rad, sb, zsamp='log')) is np.ndarray
