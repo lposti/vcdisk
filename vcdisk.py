@@ -44,8 +44,7 @@ def vc_thin_expdisk(R, Md, Rd):
     y = R/2./Rd
     return np.nan_to_num(np.sqrt(2*G_GRAV*Md/Rd*y**2*(i0(y)*k0(y)-i1(y)*k1(y))))
 
-def get_vstar_disk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None,
-                   zsamp='log', rsamp='log'):
+def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log'):
     """
     Calculate the circular velocity of a thick disk of arbitrary
     surface density using the method of Casertano (1983, MNRAS, 203, 735).
@@ -83,20 +82,46 @@ def get_vstar_disk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None,
 
     """
 
+    ################
+    # input checks #
+    ################
+    #
+    # checks on rad, sb
+    if type(rad) is list: rad = np.asarray(rad)
+    if type(sb)  is list: sb  = np.asarray(sb)
+    if type(rad) is np.ndarray and type(sb) is np.ndarray:
+        pass
+    else:
+        raise TypeError("rad and sb must be lists or np.arrays")
+    if len(rad)<1 or len(sb)<1:
+        raise ValueError("rad and sb must be arrays of size >1")
+    if len(rad) != len(sb):
+        raise ValueError("rad and sb must be arrays of the same size")
+
+    # checks on z0
+    if type(z0) is float:
+        pass
+    else:
+        try:
+            z0 = float(z0)
+        except:
+            raise TypeError("z0 must be a float")
+
     # vertical sampling
     xi = None
     nz, z0_fac = 100, 10.0
-    if zsamp=='log': xi = np.logspace(np.log10(z0/z0_fac), np.log10(z0*z0_fac), nz)
-    if zsamp=='lin': xi = np.linspace(z0/z0_fac, z0*z0_fac, nz)
+    if type(zsamp) is str and zsamp=='log': xi = np.logspace(np.log10(z0/z0_fac), np.log10(z0*z0_fac), nz)
+    if type(zsamp) is str and zsamp=='lin': xi = np.linspace(z0/z0_fac, z0*z0_fac, nz)
+    if type(zsamp) is list and type(zsamp[0]) is float: xi = np.asarray(zsamp)
     if type(zsamp) is np.ndarray: xi = zsamp
     if xi is None:
         raise TypeError("zsamp must be either 'log', 'lin' or an np.array")
 
     # radial sampling
     rr, rs_fac = None, 2
-    if rsamp=='log': rr = np.logspace(np.log10(rad.min()), np.log10(rad.max()), rs_fac*len(rad))
-    if rsamp=='lin': rr = np.linspace(rad.min(), rad.max(), rs_fac*len(rad))
-    if rsamp=='nat': rr = rad
+    if type(rsamp) is str and rsamp=='log': rr = np.logspace(np.log10(rad.min()), np.log10(rad.max()), rs_fac*len(rad))
+    if type(rsamp) is str and rsamp=='lin': rr = np.linspace(rad.min(), rad.max(), rs_fac*len(rad))
+    if type(rsamp) is str and rsamp=='nat': rr = rad
     if rr is None:
         raise TypeError("rsamp must be either 'log', 'lin' or 'nat'")
 
@@ -126,7 +151,7 @@ def _integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None):
     Integrand in Eq 4 of Casertano (1983, MNRAS, 203, 735).
     Note that here I actually use the notation of Eq A17, which is
     equivalent to Eq 4.
-    This function is called by the main function get_vstar_disk.
+    This function is called by the main function :py:func:`vcdisk`.
 
     :param u: radial variable of integration.
     :type u: list or np.array.
@@ -153,8 +178,8 @@ def _integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None):
 
     """
     z = xi[:,None]
-    x = (r**2+u**2+z**2)/(2*r*u)
-    p = x-np.sqrt(x**2-1)
+    x = (r**2+u**2+z**2)/(2*r*u) # Eq. 5
+    p = x-np.sqrt(x**2-1)        # Eq. 5
 
     # these are different choices for the vertical density profile
     rho_uz = None
