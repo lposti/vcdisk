@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from vcdisk import vcdisk
+from vcdisk import vcdisk, vc_thin_expdisk
 
 rad = np.logspace(-1, 1.5, 100)
 md, rd = 1e10, 1.0
@@ -43,6 +43,8 @@ def test_inputs():
         vcdisk(rad, sb, rhoz=rhoz_simple, rhoz_args=0)
 
 def test_output_type():
+    assert type(vc_thin_expdisk(rad, md, rd)) is np.ndarray
+
     assert type(vcdisk(rad, sb)) is np.ndarray
     assert type(vcdisk(rad, sb, z0=1)) is np.ndarray
     assert type(vcdisk(rad, sb, z0=1.0)) is np.ndarray
