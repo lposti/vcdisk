@@ -4,26 +4,6 @@
 # license: BSD-2
 #
 #
-'''
-Rotation curves of thick truncated galaxy disks (:mod:`vcdisk`)
-========================================
-This is a minimal python package to solve Poisson's equation and to compute the
-circular velocity curve of a truncated disk with non-zero thickness and arbitrary
-radial density profile. This implements the algorithm of
-[Casertano (1983)](https://ui.adsabs.harvard.edu/abs/1983MNRAS.203..735C)
-The package can be installed using pip::
-    pip install vcdisk
-Reference/API
--------------
-.. currentmodule:: vcdisk
-.. autosummary::
-   :toctree: api
-   :nosignatures:
-   vcdisk
-   _integrand
-   vc_razorthin
-
-'''
 
 __all__ = [
     'vcdisk',
@@ -40,25 +20,23 @@ from scipy.special import ellipk, ellipe, i0, i1, k0, k1
 G_GRAV = 4.301e-6 # kpc km^2 s^-2 M_sun^-1
 
 def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log'):
-    """
-    Calculate the circular velocity of a thick disk of arbitrary
-    surface density using the method of Casertano (1983, [1]_).
+    r"""
+    Circular velocity of a thick disk of arbitrary
+    surface density using the method of Casertano (1983 [1]_).
 
-    Parameters
-    ----------
     :param rad: array of radii in kpc.
-    :type rad: list or np.array.
+    :type rad: list or numpy.array
     :param sb: array of surface densities in M_sun / kpc^2.
-    :type sb: list or np.array.
+    :type sb: list or numpy.array
     :param z0: disk scaleheight in kpc. Default: 0.3 kpc.
-    :type z0: optional|float.
+    :type z0: optional|float
     :param rhoz: vertical density function. Can either be one of two
         hardcoded options, 'cosh' (default) or 'exp', or it can be
         any user-defined function with input and output np.arrays.
         The function should define the vertical surface density in
         M_sun / kpc^2 and it should be normalized such that rhoz(0)=1.
         It can have additional arguments handled by rhoz_args.
-    :type rhoz: optional|str or callable.
+    :type rhoz: optional|str or callable
     :param rhoz_args: dictionary of arguments of the user-defined
         function rhoz.
     :param zsamp: sampling in the z-direction. Can be either
@@ -66,21 +44,17 @@ def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log
         'lin' for linearly spaced values, or a user-defined np.array.
         If 'log' or 'lin' an np.array is created in the range
         [z0/10, z0*10] with size 100.
-    :type zsamp: optional|str or np.array.
+    :type zsamp: optional|str or numpy.array
     :param rsamp: sampling in the R-direction. Can be either
         'log' (default) for logarithmically spaced values,
         'lin' for linearly spaced values, or 'nat' for the natural
         spacing of the data in input rad.
     :type rsamp: optional|str
-    :type rhoz_args: optional|dict.
-
-    Returns
-    -------
+    :type rhoz_args: optional|dict
     :return: array of V_star velocities in km / s.
-    :rtype: np.array.
+    :rtype: numpy.array
 
-    Example
-    -------
+    :Example:
 
     >>> import numpy as np.
     >>> from vcdisk import vcdisk
@@ -89,10 +63,10 @@ def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log
     >>> sb = md / (2*np.pi*rd**2) * np.exp(-r/rd)
     >>> vc = vcdisk(r, sb)
 
-    Notes
-    -----
+    :Notes:
+
     The circular velocity on the mid-plane of a disk can be written as
-    :math:`V_{\rm disk}(r) = \sqrt{-r\,F_{r,\rm disk}(r)` where :math:`F_{r,\rm disk}(r)`
+    :math:`V_{\rm disk}(r) = \sqrt{-r\,F_{r,\rm disk}(r)}` where :math:`F_{r,\rm disk}(r)`
     is the radial force on the plane of the disk. The radial force can be
     calculated as
 
@@ -100,14 +74,11 @@ def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log
 
         F_{r,\rm disk}(r) = 4\pi G \int_0^\infty \mathrm{d}u \int_0^\infty \mathrm{d}z \,\,2\sqrt{\frac{u}{rp}} \,\frac{\mathcal{K}(p)-\mathcal{E}(p)}{\pi}\, \frac{\partial \rho(u,z)}{\partial u},
 
-    where :math:`p = x-\sqrt{x^2-a}` and :math:`x = (r^2+u^2+z^2)/(2ru)` (see Eqs. 4-5-6
-    in [1]_).
+    where :math:`p = x-\sqrt{x^2-a}` and :math:`x = (r^2+u^2+z^2)/(2ru)` (see Eqs. 4-5-6 [1]_).
 
-    References
-    ----------
-    .. [1] Casertano, 1983, MNRAS, 203, 735. Rotation curve of the edge-on spiral
-    galaxy NGC 5907 : disc and halo masses. doi:10.1093/mnras/203.3.735
+    :References:
 
+    .. [1] Casertano, 1983, MNRAS, 203, 735. Rotation curve of the edge-on spiral galaxy NGC 5907: disc and halo masses. doi:10.1093/mnras/203.3.735
 
     """
 
@@ -177,11 +148,11 @@ def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log
 
 
 def _integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None):
-    """
+    r"""
     Integrand in Eq. (4) of Casertano (1983, MNRAS, 203, 735).
     Note that here I actually use the notation of Eq. (A17), which is
     equivalent to Eq. (4).
-    This function is called by the main function :py:func:`vcdisk`.
+    This function is called by the main function :py:func:`vcdisk.vcdisk`.
 
     :param u: radial variable of integration.
     :type u: list or np.array.
@@ -237,7 +208,7 @@ def _integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None):
 
 
 def vc_thin_expdisk(R, Md, Rd):
-    """
+    r"""
     Circular velocity of an infinitely thin exponential disk.
     This result was first derived by Freeman (1970), ApJ, 160, 811,
     see their Eq. (10).

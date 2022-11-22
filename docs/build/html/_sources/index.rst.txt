@@ -6,7 +6,6 @@ radial density profile. This implements the algorithm of
 [Casertano (1983)](https://ui.adsabs.harvard.edu/abs/1983MNRAS.203..735C)
 The package can be installed using pip::
     pip install vcdisk
-
 Contents
 --------
 
