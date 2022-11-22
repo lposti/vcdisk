@@ -1,4 +1,5 @@
 # vcdisk
+![](coverage.svg)
 
 Rotation curves of thick truncated galaxy disks.
 

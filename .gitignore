@@ -16,3 +16,6 @@ venv.bak/
 
 # Tests
 .pytest_cache
+
+# Coverage
+.coverage
