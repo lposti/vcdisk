@@ -1,9 +1,11 @@
 API
 ===
 
+.. currentmodule:: vcdisk
 .. autosummary::
-   :toctree: 
+   :toctree: api
+   :nosignatures:
 
-   vcdisk.vcdisk
-   vcdisk._integrand
-   vcdisk.vc_thin_expdisk
+   vcdisk
+   _integrand
+   vc_thin_expdisk
