@@ -2,7 +2,7 @@ API
 ===
 
 .. autosummary::
-   :toctree:
+   :toctree: 
 
    vcdisk.vcdisk
    vcdisk._integrand

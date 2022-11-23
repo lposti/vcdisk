@@ -1,6 +1,8 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+src/__pycache__/
+src/vcdisk.egg-info/
 
 # Jupyter Notebook
 .ipynb_checkpoints

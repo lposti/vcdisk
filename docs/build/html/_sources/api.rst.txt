@@ -1,9 +1,8 @@
+.. module:: vcdisk
+
 API
 ===
 
-.. autosummary::
-   :toctree:
-
-   vcdisk.vcdisk
-   vcdisk._integrand
-   vcdisk.vc_thin_expdisk
+.. autofunction:: vcdisk
+.. autofunction:: _integrand
+.. autofunction:: vc_thin_expdisk
