@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 name = "vcdisk"
 authors = [{name = "Lorenzo Posti", email = "lorenzo.posti@gmail.com"}]
 # dynamic = ["version", "description"]
-version = "0.1"
+version = "0.1.0"
 description = "Circular velocities of thick galaxy disks"
 readme = "README.md"
 license = { file = "LICENSE" }

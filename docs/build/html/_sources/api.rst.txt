@@ -1,8 +1,0 @@
-.. module:: vcdisk
-
-API
-===
-
-.. autofunction:: vcdisk
-.. autofunction:: _integrand
-.. autofunction:: vc_thin_expdisk
