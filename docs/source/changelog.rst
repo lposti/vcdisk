@@ -10,3 +10,4 @@ version: 0.1.0
 * Added unit testing: coverage 100%
 * Added full Sphinx documentation
 * Added "Getting started" jupyter notebook tutorial
+* Uploaded the package to PyPI

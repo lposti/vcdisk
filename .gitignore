@@ -5,6 +5,9 @@ src/__pycache__/
 src/vcdisk.egg-info/
 vcdisk.egg-info/
 
+# distribution
+dist/
+
 # Jupyter Notebook
 .ipynb_checkpoints
 
