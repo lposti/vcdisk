@@ -21,7 +21,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
-    'sphinxjp.themes.basicstrap',
+    # 'sphinxjp.themes.basicstrap',
     'nbsphinx',
     # 'myst_parser',
 ]
