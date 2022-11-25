@@ -12,11 +12,10 @@ py-modules = ['vcdisk']
 [project]
 name = "vcdisk"
 authors = [{name = "Lorenzo Posti", email = "lorenzo.posti@gmail.com"}]
-# dynamic = ["version", "description"]
-version = "0.1.0"
+version = "0.1.1"
 description = "Circular velocities of thick galaxy disks"
 readme = "README.md"
-license = { file = "LICENSE" }
+license = { text = "BSD-2" }
 classifiers = [
     "License :: OSI Approved :: BSD License",
     "Programming Language :: Python",
@@ -28,4 +27,5 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/lposti/vcdisk"
+homepage = "https://github.com/lposti/vcdisk"
+documentation = "https://vcdisk.readthedocs.io/en/latest/"

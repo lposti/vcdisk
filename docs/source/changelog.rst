@@ -2,6 +2,11 @@
 Changelog
 =========
 
+version: 0.1.1
+--------------
+
+* Working `RTD documentation <https://vcdisk.readthedocs.io/en/latest/>`_
+
 version: 0.1.0
 --------------
 

@@ -2,7 +2,7 @@
 ![](coverage.svg)
 
 A minimal python module to solve Poisson's equation in a thick galactic disk.
-This is useful to compute the circular velocity on the disk plane of a disk galaxy
+This is useful to compute the circular velocity on the disk plane of a galaxy
 with observed surface density profile and arbitrary, user-defined vertical profile.
 
 `vcdisk` implements the algorithm of
