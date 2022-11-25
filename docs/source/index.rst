@@ -1,8 +1,18 @@
-Rotation curves of thick galaxy disks
-=====================================================
-This is a minimal python package to solve Poisson's equation and to compute the
-circular velocity curve of a truncated disk with non-zero thickness and arbitrary
-radial density profile. This implements the algorithm of Casertano (1983 [1]_).
+``vcdisk``: Rotation curves of thick galaxy disks
+#################################################
+
+A minimal python module to solve Poisson's equation in a thick galactic disk.
+This is useful to compute the circular velocity on the disk plane of a disk galaxy
+with observed surface density profile and arbitrary, user-defined vertical profile.
+
+:py:func:`~vcdisk.vcdisk` implements the algorithm of [Casertano83]_, which calculates
+the radial force on the disk plane as a 2-D integral (their Eq. 4) and then derives
+the velocity of a circular orbit on the disk plane.
+
+.. image:: vcdisk_banner.png
+
+Install
+=======
 
 The package can be installed using
 
@@ -10,14 +20,24 @@ The package can be installed using
 
    pip install vcdisk
 
-References
-----------
-
-.. [1] Casertano, 1983, MNRAS, 203, 735. https://ui.adsabs.harvard.edu/abs/1983MNRAS.203..735C
-
-Contents
---------
+Getting started
+===============
 
 .. toctree::
+  :maxdepth: 1
 
-   api
+  notebooks/usage.ipynb
+
+Reference/API
+=============
+
+.. toctree::
+  :maxdepth: 2
+
+  api
+  changelog
+
+References
+==========
+
+.. [Casertano83] Casertano, 1983, MNRAS, 203, 735. https://ui.adsabs.harvard.edu/abs/1983MNRAS.203..735C

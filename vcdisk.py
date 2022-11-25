@@ -7,7 +7,7 @@
 
 __all__ = [
     'vcdisk',
-    '_integrand',
+    'integrand',
     'vc_thin_expdisk',
 ]
 
@@ -21,64 +21,148 @@ G_GRAV = 4.301e-6 # kpc km^2 s^-2 M_sun^-1
 
 def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log'):
     r"""
-    Circular velocity of a thick disk of arbitrary
-    surface density using the method of Casertano (1983 [1]_).
+    Circular velocity of a thick disk of arbitrary surface density.
+    This function uses the method of [Casertano83]_ to calculate
+    the radial force on the disk plane and then the circular velocity.
 
-    :param rad: array of radii in kpc.
-    :type rad: list or numpy.array
-    :param sb: array of surface densities in M_sun / kpc^2.
-    :type sb: list or numpy.array
-    :param z0: disk scaleheight in kpc. Default: 0.3 kpc.
-    :type z0: optional|float
+    :param rad: array of radii in :math:`\rm kpc`.
+    :type rad: list or numpy.ndarray
+    :param sb: array of surface densities in :math:`\rm M_\odot / kpc^2`.
+    :type sb: list or numpy.ndarray
+    :param z0: disk scaleheight in kpc. Default: 0.3 :math:`\rm kpc`.
+    :type z0: float, optional
     :param rhoz: vertical density function. Can either be one of two
-        hardcoded options, 'cosh' (default) or 'exp', or it can be
-        any user-defined function with input and output np.arrays.
+        hardcoded options, ``'cosh'`` (default) or ``'exp'``, or it can be
+        any user-defined function with input and output numpy.ndarray.
         The function should define the vertical surface density in
-        M_sun / kpc^2 and it should be normalized such that rhoz(0)=1.
-        It can have additional arguments handled by rhoz_args.
-    :type rhoz: optional|str or callable
+        :math:`\rm M_\odot / kpc^2` and it should be normalized such that
+        ``rhoz(0)=1``.
+        It can have additional arguments handled by ``rhoz_args``. See
+        :ref:`rhoz-label` for details.
+    :type rhoz: str or callable, optional
     :param rhoz_args: dictionary of arguments of the user-defined
-        function rhoz.
+        function ``rhoz``.
+    :type rhoz_args: dict, optional
     :param zsamp: sampling in the z-direction. Can be either
-        'log' (default) for logarithmically spaced values,
-        'lin' for linearly spaced values, or a user-defined np.array.
-        If 'log' or 'lin' an np.array is created in the range
+        ``'log'`` (default) for logarithmically spaced values,
+        ``'lin'`` for linearly spaced values, or a user-defined np.array.
+        If ``'log'`` or ``'lin'`` an numpy.ndarray is created in the range
         [z0/10, z0*10] with size 100.
-    :type zsamp: optional|str or numpy.array
-    :param rsamp: sampling in the R-direction. Can be either
-        'log' (default) for logarithmically spaced values,
-        'lin' for linearly spaced values, or 'nat' for the natural
-        spacing of the data in input rad.
-    :type rsamp: optional|str
-    :type rhoz_args: optional|dict
-    :return: array of V_star velocities in km / s.
-    :rtype: numpy.array
+    :type zsamp: str or numpy.ndarray, optional
+    :param rsamp: sampling in the :math:`R`-direction. Can be either
+        ``'log'`` (default) for logarithmically spaced values,
+        ``'lin'`` for linearly spaced values, or ``'nat'`` for the natural
+        spacing of the data in input ``rad``.
+    :type rsamp: str, optional
+    :return: array of :math:`V_{\rm disk}` velocities in :math:`\rm km/s`.
+    :rtype: numpy.ndarray
 
-    :Example:
+    .. seealso::
 
-    >>> import numpy as np.
-    >>> from vcdisk import vcdisk
-    >>> md, rd = 1e10, 2.0
-    >>> r = np.linspace(0.1, 30.0, 50)
-    >>> sb = md / (2*np.pi*rd**2) * np.exp(-r/rd)
-    >>> vc = vcdisk(r, sb)
+        `gipsy.rotmod <https://www.astro.rug.nl/~gipsy/tsk/rotmod.dc1>`_
 
-    :Notes:
+    .. _notes-label:
 
-    The circular velocity on the mid-plane of a disk can be written as
-    :math:`V_{\rm disk}(r) = \sqrt{-r\,F_{r,\rm disk}(r)}` where :math:`F_{r,\rm disk}(r)`
-    is the radial force on the plane of the disk. The radial force can be
-    calculated as
+    Notes
+    =====
+
+    .. _background-label:
+
+    Background
+    ----------
+
+    The circular velocity on the mid-plane of a disk galaxy can be written as
+
+    .. math::
+        V_{\rm disk}(r) = \sqrt{-r\,F_{r,\rm disk}(r)},
+
+    where :math:`F_{r,\rm disk}(r)` is the radial force on the plane of the disk,
+    which is calculated as
 
     .. math::
 
-        F_{r,\rm disk}(r) = 4\pi G \int_0^\infty \mathrm{d}u \int_0^\infty \mathrm{d}z \,\,2\sqrt{\frac{u}{rp}} \,\frac{\mathcal{K}(p)-\mathcal{E}(p)}{\pi}\, \frac{\partial \rho(u,z)}{\partial u},
+        F_{r,\rm disk}(r) = 4\pi G \int_0^\infty \mathrm{d}u \int_0^\infty \mathrm{d}z \,\,2\sqrt{\frac{u}{rp}} \,\frac{\mathcal{K}(p)-\mathcal{E}(p)}{\pi}\, \frac{\partial \rho(u,z)}{\partial u}.
 
-    where :math:`p = x-\sqrt{x^2-a}` and :math:`x = (r^2+u^2+z^2)/(2ru)` (see Eqs. 4-5-6 [1]_).
+    Here :math:`p = x-\sqrt{x^2-a}`, :math:`x = (r^2+u^2+z^2)/(2ru)`, and
+    :math:`\mathcal{K}` and :math:`\mathcal{E}` are the complete elliptic integrals
+    respectively of the first and second kinds (see Eqs. 4-5-6 and Appendix A of
+    [Casertano83]_ for full details).
 
-    :References:
+    This program follows the notation of `gipsy <https://www.astro.rug.nl/~gipsy/>`_
+    in defining a *signed* circular velocity which has the opposite sign of the
+    radial force, i.e.
 
-    .. [1] Casertano, 1983, MNRAS, 203, 735. Rotation curve of the edge-on spiral galaxy NGC 5907: disc and halo masses. doi:10.1093/mnras/203.3.735
+    .. math::
+        V_{\rm disk}(r) = -{\rm sign}\left[F_{r,\rm disk}(r)\right]\sqrt{r\,|F_{r,\rm disk}(r)|}.
+
+    This convention is such that :math:`V_{\rm disk}` is negative if there is a net
+    force away from the galaxy center. This can happen, for instance, in cases where
+    the surface density has a depression close to the center, as it is often observed
+    in the neutral hydrogen disks of nearby spiral galaxies.
+
+    .. _rhoz-label:
+
+    Vertical density
+    ----------------
+
+    The radial force on the disk plane depends both on the radial surface density
+    as well as on the vertical density distribution of the disk.
+    While the radial surface density of can be typically obtained from observations
+    of the surface brightness, in rotation curve studies the vertical density
+    distribution is often unknown.
+
+    Here we provide the user with two choices for the vertical density profile of
+    the disk which are often used to describe disk galaxies:
+
+    * ``'cosh'`` (**default**): this corresponds to :math:`\rho(z)\propto\cosh^{-2}(z/z_0)`, i.e. the so-called [vdKruitSearle81]_ disk,
+    * ``'exp'``: this corresponds to :math:`\rho(z)\propto\exp(-z/z_0)`.
+
+    In both cases, the profiles are normalized such that :math:`\rho(0)=1\,\,\rm M_\odot/kpc^2`
+    and the parameter :math:`z_0` is the scaleheight of the disc.
+
+    The user can also choose to specify a custom vertical density profile by passing
+    a callable function as the ``rhoz`` argument. Do note that :py:func:`vcdisk.vcdisk`
+    expects this function to be normalized such that :math:`\rho(0)=1\,\,\rm M_\odot/kpc^2`.
+
+    .. note::
+        I have implemented only vertical distributions with a fixed scaleheight as
+        a function of radius. However, there is no particular impediment to extend
+        this to more general distributions where :math:`z_0=z_0(R)`.
+
+    Implementation details
+    ----------------------
+
+    :py:func:`vcdisk.vcdisk` uses Simpson's method, implemented in
+    :func:`scipy.integrate.simpson`, to compute the double integral quickly and
+    efficiently. The ``scipy`` library is also used for the implementation of the
+    elliptic integrals :func:`scipy.special.ellipk` and :func:`scipy.special.ellipe`.
+
+    The arbitrary sampling in the :math:`z`-direction unfortunately seems to somewhat
+    have a (small) impact on the derived :math:`V_{\rm disk}`. This is probably
+    because of numerical noise in the double integral when Simpson's method is used
+    on very steep functions such as 3-D densities of galaxy disks. After extensive
+    tests where I compared the results with analytic formulae for a thin disk and
+    with `gipsy <https://www.astro.rug.nl/~gipsy/>`_'s implementation, I have come
+    to the conclusion that a logarithmic sampling in the :math:`z`-direction
+    in the range :math:`z\in[z_0/10, 10\,z_0]` with 100 samples is a good compromise
+    between speed and accuracy.
+
+    References
+    ----------
+
+    .. [Casertano83] Casertano, S. 1983, MNRAS, 203, 735. Rotation curve of the edge-on spiral galaxy NGC 5907: disc and halo masses. `doi:10.1093/mnras/203.3.735 <https://doi.org/10.1093/mnras/203.3.735>`_
+    .. [vdKruitSearle81] van der Kruit, P. C. & Searle, L. 1981, A&A, 95, 105. Surface photometry of edge-on spiral galaxies. I - A model for the three-dimensional distribution of light in galactic disks.
+
+    Example
+    =======
+
+    >>> import numpy as np
+    >>> from vcdisk import vcdisk
+    >>> md, rd = 1e10, 2.0                        # mass, scalelength of the disk
+    >>> r = np.linspace(0.1, 30.0, 50)            # radii samples
+    >>> sb = md / (2*np.pi*rd**2) * np.exp(-r/rd) # exponential disk surface density
+    >>> vcdisk(r, sb)
+    array([ 6.36888305, 38.63854589, ..., 38.26020293, 37.82648552])
 
     """
 
@@ -132,10 +216,10 @@ def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log
 
     # calculation of the double integral (Eq 4 in Casertano 1983)
     rad_force = 4 * np.pi * G_GRAV *\
-                np.array([simpson(simpson(_integrand(rr, xi, r, smdisk,
-                                                     z0=z0,
-                                                     rhoz=rhoz,
-                                                     rhoz_args=rhoz_args
+                np.array([simpson(simpson(integrand(rr, xi, r, smdisk,
+                                                    z0=z0,
+                                                    rhoz=rhoz,
+                                                    rhoz_args=rhoz_args
                                                     ).T, xi), rr) for r in rad])
 
     # getting the circular velocity
@@ -147,35 +231,54 @@ def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log
     return v_circ
 
 
-def _integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None):
+def integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None):
     r"""
-    Integrand in Eq. (4) of Casertano (1983, MNRAS, 203, 735).
+    Integrand function for the radial force integral.
+    This is the integrand Eq. (4) of [Casertano83]_.
+
+    :param u: radial variable of integration in :math:`\rm kpc`.
+    :type u: list or numpy.ndarray
+    :param xi: vertical variable of integration in :math:`\rm kpc`.
+    :type xi: list or numpy.ndarray
+    :param r: radius in :math:`\rm kpc` at which the radial force
+        is evaluated
+    :type r: float
+    :param smdisk: array of surface densities in :math:`\rm M_\odot / kpc^2`.
+    :type smdisk: list or numpy.ndarray
+    :param z0: disk scaleheight in :math:`\rm kpc`. Default: :math:`0.3 \rm kpc`.
+    :type z0: float, optional
+    :param rhoz: vertical density function. Can either be one of two
+        hardcoded options, ``'cosh'`` (default) or ``'exp'``, or it can be
+        any user-defined function with input and output numpy.ndarray.
+        The function should define the vertical surface density in
+        :math:`\rm M_\odot / kpc^2` and it should be normalized such that
+        ``rhoz(0)=1``.
+        It can have additional arguments handled by ``rhoz_args``. See
+        :ref:`rhoz-label` for details.
+    :type rhoz: str or callable, optional
+    :param rhoz_args: dictionary of arguments of the user-defined
+        function ``rhoz``.
+    :type rhoz_args: dict, optional
+    :return: 2-D array of the radial force integrand, with shape
+        ``(len(xi), len(u))``.
+    :rtype: numpy.ndarray
+
+    .. seealso::
+
+        :py:func:`vcdisk.vcdisk`
+
+    Notes
+    =====
+
     Note that here I actually use the notation of Eq. (A17), which is
     equivalent to Eq. (4).
     This function is called by the main function :py:func:`vcdisk.vcdisk`.
 
-    :param u: radial variable of integration.
-    :type u: list or np.array.
-    :param xi: vertical variable of integration.
-    :type xi: list or np.array.
-    :param r: radius at which the radial force is evaluated
-    :type r: float.
-    :param smdisk: array of surface densities in M_sun / kpc^2.
-    :type smdisk: list or np.array.
-    :param z0: disk scaleheight in kpc. Default: 0.3 kpc.
-    :type z0: optional|float.
-    :param rhoz: vertical density function. Can either be one of two
-        hardcoded options, 'cosh' (default) or 'exp', or it can be
-        any user-defined function with input and output np.arrays.
-        The function should define the vertical surface density in
-        M_sun / kpc^2 and it should be normalized such that rhoz(0)=1.
-        It can have additional arguments handled by rhoz_args.
-    :type rhoz: optional|str or callable.
-    :param rhoz_args: dictionary of arguments of the user-defined
-        function rhoz.
-    :return: 2-D array of the radial force integrand, with shape
-        (len(xi), len(u)).
-    :rtype: np.array.
+    References
+    ----------
+
+    .. [Casertano83] Casertano, 1983, MNRAS, 203, 735. Rotation curve of the edge-on spiral galaxy NGC 5907: disc and halo masses. `doi:10.1093/mnras/203.3.735 <https://doi.org/10.1093/mnras/203.3.735>`_
+
 
     """
     z = xi[:,None]

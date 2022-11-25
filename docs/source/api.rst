@@ -3,9 +3,9 @@ API
 
 .. currentmodule:: vcdisk
 .. autosummary::
-   :toctree: api
+   :toctree: generated
    :nosignatures:
 
    vcdisk
-   _integrand
    vc_thin_expdisk
+   integrand

@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 src/__pycache__/
 src/vcdisk.egg-info/
+vcdisk.egg-info/
 
 # Jupyter Notebook
 .ipynb_checkpoints
