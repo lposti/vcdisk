@@ -127,7 +127,7 @@ def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log
     .. note::
         I have implemented only vertical distributions with a fixed scaleheight as
         a function of radius. However, there is no particular impediment to extend
-        this to more general distributions where :math:`z_0=z_0(R)`.
+        this to more general distributions :math:`z_0=z_0(R)`.
 
     Implementation details
     ----------------------

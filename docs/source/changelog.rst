@@ -2,6 +2,12 @@
 Changelog
 =========
 
+version: 0.1.2
+--------------
+
+* Added zenodo DOI.
+
+
 version: 0.1.1
 --------------
 
