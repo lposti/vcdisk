@@ -1,7 +1,5 @@
-# vcdisk
+# `vcdisk`: Rotation curves of thick truncated galaxy disks
 ![](coverage.svg)
-
-`vcdisk`: Rotation curves of thick truncated galaxy disks
 
 A minimal python module to solve Poisson's equation in a thick galactic disk.
 This is useful to compute the circular velocity on the disk plane of a disk galaxy
