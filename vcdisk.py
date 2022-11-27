@@ -19,7 +19,7 @@ from scipy.special import ellipk, ellipe, i0, i1, k0, k1
 # constants
 G_GRAV = 4.301e-6 # kpc km^2 s^-2 M_sun^-1
 
-def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log'):
+def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log', flaring=False):
     r"""
     Circular velocity of a thick disk of arbitrary surface density.
     This function uses the method of [Casertano83]_ to calculate
@@ -219,7 +219,8 @@ def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log
                 np.array([simpson(simpson(integrand(rr, xi, r, smdisk,
                                                     z0=z0,
                                                     rhoz=rhoz,
-                                                    rhoz_args=rhoz_args
+                                                    rhoz_args=rhoz_args,
+                                                    flaring=flaring
                                                     ).T, xi), rr) for r in rad])
 
     # getting the circular velocity
@@ -231,7 +232,7 @@ def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log
     return v_circ
 
 
-def integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None):
+def integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None, flaring=False):
     r"""
     Integrand function for the radial force integral.
     This is the integrand Eq. (4) of [Casertano83]_.
@@ -293,13 +294,17 @@ def integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None):
         rho_uz = smdisk / (2*z0) * np.exp(-z/z0)
     if callable(rhoz) and rhoz_args is None and type(rhoz(z)) is np.ndarray:
         rho_uz = smdisk / (2*z0) * rhoz(z)
-    if rhoz_args is not None:
+    if flaring:
+        if callable(rhoz) and type(rhoz(z, u, **rhoz_args)) is np.ndarray:
+            rho_uz = smdisk / (2*z0) * rhoz(z, u, **rhoz_args)
+    elif rhoz_args is not None:
         try:
             if callable(rhoz) and type(rhoz(z, **rhoz_args)) is np.ndarray:
                     rho_uz = smdisk / (2*z0) * rhoz(z, **rhoz_args)
         except:
             raise TypeError("rhoz_args is a dictionary of additional arguments of "+
                              "the rhoz callable function")
+
     if rho_uz is None:
         raise TypeError("rhoz must be 'cosh', 'exp' or a callable function")
 
