@@ -13,7 +13,7 @@ __all__ = [
 
 
 import numpy as np
-from scipy.integrate import simpson
+from scipy.integrate import simpson, quad
 from scipy.special import ellipk, ellipe, i0, i1, k0, k1
 
 # constants
@@ -293,14 +293,17 @@ def integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None, flaring=Fal
     if rhoz=='exp':
         rho_uz = smdisk / (2*z0) * np.exp(-z/z0)
     if callable(rhoz) and rhoz_args is None and type(rhoz(z)) is np.ndarray:
-        rho_uz = smdisk / (2*z0) * rhoz(z)
+        norm = quad(rhoz, 0, np.inf)[0]
+        rho_uz = smdisk / (2*norm) * rhoz(z)
     if flaring:
         if callable(rhoz) and type(rhoz(z, u, **rhoz_args)) is np.ndarray:
-            rho_uz = smdisk / (2*z0) * rhoz(z, u, **rhoz_args)
+            # assuming rhoz is normalised
+            rho_uz = smdisk * rhoz(z, u, **rhoz_args)
     elif rhoz_args is not None:
         try:
             if callable(rhoz) and type(rhoz(z, **rhoz_args)) is np.ndarray:
-                    rho_uz = smdisk / (2*z0) * rhoz(z, **rhoz_args)
+                norm = quad(rhoz, 0, np.inf, args=rhoz_args)[0]
+                rho_uz = smdisk / (2*norm) * rhoz(z, **rhoz_args)
         except:
             raise TypeError("rhoz_args is a dictionary of additional arguments of "+
                              "the rhoz callable function")
