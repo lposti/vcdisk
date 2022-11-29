@@ -6,9 +6,10 @@ from vcdisk import vcdisk, vc_thin_expdisk
 rad = np.logspace(-1, 1.5, 100)
 md, rd = 1e10, 1.0
 sb  = md / (2*np.pi*rd**2) * np.exp(-rad/rd)
-rhoz_simple = lambda x: x**-2
-rhoz_compl  = lambda x,t: t*x**-2
-rhoz_flare  = lambda x,y,t: np.exp(-x/(1.0+y*t))
+rhoz_simple = lambda x: np.exp(-x**2)
+rhoz_compl  = lambda x,t: t*np.exp(-x**2)
+rhoz_flare1 = lambda x,y: np.exp(-x/(1.0+y*1.0))
+rhoz_flare2 = lambda x,y,t: np.exp(-x/(1.0+y*t))
 
 def test_inputs():
     # input rad, sb
@@ -81,4 +82,5 @@ def test_output_type():
     assert type(vcdisk(rad, sb, rhoz='exp')) is np.ndarray
     assert type(vcdisk(rad, sb, rhoz=rhoz_simple)) is np.ndarray
     assert type(vcdisk(rad, sb, rhoz=rhoz_compl, rhoz_args={"t":1.0})) is np.ndarray
-    assert type(vcdisk(rad, sb, rhoz=rhoz_flare, rhoz_args={"t":1.0}, flaring=True)) is np.ndarray
+    assert type(vcdisk(rad, sb, rhoz=rhoz_flare1, flaring=True)) is np.ndarray
+    assert type(vcdisk(rad, sb, rhoz=rhoz_flare2, rhoz_args={"t":1.0}, flaring=True)) is np.ndarray

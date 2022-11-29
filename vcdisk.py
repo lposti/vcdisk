@@ -292,17 +292,23 @@ def integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None, flaring=Fal
         rho_uz = smdisk / (2*z0) * np.cosh(z/z0)**-2
     if rhoz=='exp':
         rho_uz = smdisk / (2*z0) * np.exp(-z/z0)
-    if callable(rhoz) and rhoz_args is None and type(rhoz(z)) is np.ndarray:
+    if not flaring and callable(rhoz) and rhoz_args is None and type(rhoz(z)) is np.ndarray:
         norm = quad(rhoz, 0, np.inf)[0]
         rho_uz = smdisk / (2*norm) * rhoz(z)
     if flaring:
-        if callable(rhoz) and type(rhoz(z, u, **rhoz_args)) is np.ndarray:
+        if callable(rhoz) and rhoz_args is None and type(rhoz(z,u)) is np.ndarray:
+            # assuming rhoz is normalised
+            rho_uz = smdisk * rhoz(z, u)
+        elif callable(rhoz) and type(rhoz(z, u, **rhoz_args)) is np.ndarray:
             # assuming rhoz is normalised
             rho_uz = smdisk * rhoz(z, u, **rhoz_args)
-    elif rhoz_args is not None:
+    if not flaring and rhoz_args is not None:
         try:
             if callable(rhoz) and type(rhoz(z, **rhoz_args)) is np.ndarray:
-                norm = quad(rhoz, 0, np.inf, args=rhoz_args)[0]
+                ###
+                # take extra care that rhoz_args is given in the correct positional order!!!
+                ###
+                norm = quad(rhoz, 0, np.inf, args=tuple(rhoz_args.values()))[0]
                 rho_uz = smdisk / (2*norm) * rhoz(z, **rhoz_args)
         except:
             raise TypeError("rhoz_args is a dictionary of additional arguments of "+
