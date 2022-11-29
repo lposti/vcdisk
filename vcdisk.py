@@ -327,19 +327,22 @@ def integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None, flaring=Fal
 def vc_thin_expdisk(R, Md, Rd):
     r"""
     Circular velocity of an infinitely thin exponential disk.
-    This result was first derived by Freeman (1970), ApJ, 160, 811,
-    see their Eq. (10).
+    See [Freeman70]_, Eq. (10).
 
-    :param R: radii in kpc where to calculate V_circ.
-    :type R: float or list or np.array.
-    :param Md: disk mass in M_sun.
-    :type Md: float.
-    :param Rd: exponential scale-length of the disk in kpc
-    :type Rd: float.
-
+    :param R: radii in :math:`\rm kpc`.
+    :type R: float or list or numpy.ndarray
+    :param Md: disk mass in :math:`\rm M_\odot`.
+    :type Md: float
+    :param Rd: exponential scale-length of the disk in :math:`\rm kpc`
+    :type Rd: float
     :return: 1-D array (same shape as R) of the circular velocities
-        in km / s.
-    :rtype: float or np.array.
+        in :math:`\rm km/s`.
+    :rtype: float or numpy.ndarray
+
+    References
+    ----------
+
+    .. [Freeman70] Freeman (1970), ApJ, 160, 811. On the Disks of Spiral and S0 Galaxies. `https://ui.adsabs.harvard.edu/abs/1970ApJ...160..811F/ <https://ui.adsabs.harvard.edu/abs/1970ApJ...160..811F/>`_
 
     """
 
