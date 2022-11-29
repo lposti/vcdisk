@@ -19,7 +19,7 @@ from scipy.special import ellipk, ellipe, i0, i1, k0, k1
 # constants
 G_GRAV = 4.301e-6 # kpc km^2 s^-2 M_sun^-1
 
-def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log', flaring=False):
+def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, flaring=False, zsamp='log', rsamp='log'):
     r"""
     Circular velocity of a thick disk of arbitrary surface density.
     This function uses the method of [Casertano83]_ to calculate
@@ -43,6 +43,13 @@ def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log
     :param rhoz_args: dictionary of arguments of the user-defined
         function ``rhoz``.
     :type rhoz_args: dict, optional
+    :param flaring: whether the vertical density function ``rhoz`` depends
+        also on radius, i.e. if :math:`\rho_z=\rho_z(z,R)`. If ``True``, then
+        ``rhoz`` must be a callable function with signature ``rhoz(z, R)`` or
+        ``rhoz(z, R, **rhoz_args)``. This option assumes that the vertical
+        density provided is normalized, i.e.
+        :math:`\int {\rm d}z\, \rho_z(z,R)=1\,\,\,\forall R`.
+    :type flaring: bool, optional
     :param zsamp: sampling in the z-direction. Can be either
         ``'log'`` (default) for logarithmically spaced values,
         ``'lin'`` for linearly spaced values, or a user-defined np.array.
@@ -59,7 +66,7 @@ def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log
 
     .. seealso::
 
-        `gipsy.rotmod <https://www.astro.rug.nl/~gipsy/tsk/rotmod.dc1>`_
+        `gipsy.rotmod <https://www.astro.rug.nl/~gipsy/tsk/rotmod.dc1>`_, `galpynamics <https://gitlab.com/iogiul/galpynamics>`_
 
     .. _notes-label:
 
@@ -111,23 +118,58 @@ def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, zsamp='log', rsamp='log
     of the surface brightness, in rotation curve studies the vertical density
     distribution is often unknown.
 
-    Here we provide the user with two choices for the vertical density profile of
-    the disk which are often used to describe disk galaxies:
+    Here we provide the user with several choices for the vertical density profile of
+    the disk.
 
-    * ``'cosh'`` (**default**): this corresponds to :math:`\rho(z)\propto\cosh^{-2}(z/z_0)`, i.e. the so-called [vdKruitSearle81]_ disk,
-    * ``'exp'``: this corresponds to :math:`\rho(z)\propto\exp(-z/z_0)`.
+    Vertical density: constant scaleheight
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    In both cases, the profiles are normalized such that :math:`\rho(0)=1\,\,\rm M_\odot/kpc^2`
-    and the parameter :math:`z_0` is the scaleheight of the disc.
+    The simplest and the most common assumption is that the axisymmetric disk has
+    a constant scaleheight, which implies that the density is separable as
+    :math:`\rho(R,z)=\rho_R(R)\rho_z(z)`. Thus, defining the surface density on
+    the disk plane as :math:`\Sigma(R)=\int {\rm d}z\, \rho(R,z)`, we can write
+    :math:`\rho(R,z)=\Sigma(R)\rho_z(z)/N`, where :math:`N` is the
+    normalization of the vertical density :math:`N=\int {\rm d}z\, \rho_z(z)`.
 
-    The user can also choose to specify a custom vertical density profile by passing
-    a callable function as the ``rhoz`` argument. Do note that :py:func:`vcdisk.vcdisk`
-    expects this function to be normalized such that :math:`\rho(0)=1\,\,\rm M_\odot/kpc^2`.
+    We provide full implementations of two popular choices for :math:`\rho_z(z)`
+    that are often used to describe disk galaxies, and we also provide an interface
+    for the user to supply their own vertical density profile.
+
+    * ``'cosh'`` (**default**): this corresponds to :math:`\rho_z(z)=\cosh^{-2}(z/z_0)`, with :math:`N=2z_0`, i.e. the so-called [vdKruitSearle81]_ disk,
+    * ``'exp'``: this corresponds to :math:`\rho_z(z)=\exp(-z/z_0)`, with :math:`N=2z_0`.
+    * the user may also choose to specify a custom vertical density profile by passing a callable function as the ``rhoz`` argument.
 
     .. note::
-        I have implemented only vertical distributions with a fixed scaleheight as
-        a function of radius. However, there is no particular impediment to extend
-        this to more general distributions :math:`z_0=z_0(R)`.
+        If the user specifies a callable ``rhoz``, :py:func:`vcdisk.vcdisk` will try
+        to normalize it for you using :func:`scipy.integrate.quad` to solve the integral
+        :math:`\int {\rm d}z\, \rho_z(z)`. Do look out for potential issues related
+        to this normalization.
+
+    .. warning::
+        If the user-defined function ``rhoz`` has signature ``rhoz(z, **rhoz_args)``,
+        then make sure that the ``rhoz_args`` dictionary supplied to :py:func:`vcdisk.vcdisk`
+        is in the correct positional order, since keys get lost when calculating the
+        normalization integral.
+
+
+    Vertical density: flaring disks
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    Another possibility is that the vertical density :math:`\rho_z` depends also on
+    radius, so that :math:`\rho(R,z)` is not separable. Often this happens since
+    galactic disks flare in the outer regions, where the gravitational support is
+    lower, thus one may wish to compute the circular velocity in the case where
+    the scaleheight depends on radius, :math:`z_0=z_0(R)`.
+
+    By activating the option ``flaring=True``, :py:func:`vcdisk.vcdisk` computes the
+    potential with a :math:`\rho_z(z,R)` specified via the ``rhoz`` parameter.
+    As an example, this could be something like
+    :math:`\rho_z(z,R) = e^{-z/z_0(R)}/2z_0(R)`.
+
+    .. note::
+        If ``flaring=True``, :py:func:`vcdisk.vcdisk` expects the callable ``rhoz``
+        function to be *already normalized*, such that
+        :math:`\int {\rm d}z\, \rho_z(z,R)=1\,\,\,\forall R`.
 
     Implementation details
     ----------------------
@@ -260,6 +302,13 @@ def integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None, flaring=Fal
     :param rhoz_args: dictionary of arguments of the user-defined
         function ``rhoz``.
     :type rhoz_args: dict, optional
+    :param flaring: whether the vertical density function ``rhoz`` depends
+        also on radius, i.e. if :math:`\rho_z=\rho_z(z,R)`. If ``True``, then
+        ``rhoz`` must be a callable function with signature ``rhoz(z, R)`` or
+        ``rhoz(z, R, **rhoz_args)``. This option assumes that the vertical
+        density provided is normalized, i.e.
+        :math:`\int {\rm d}z\, \rho_z(z,R)=1\,\,\,\forall R`.
+    :type flaring: bool, optional
     :return: 2-D array of the radial force integrand, with shape
         ``(len(xi), len(u))``.
     :rtype: numpy.ndarray
