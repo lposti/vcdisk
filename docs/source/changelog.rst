@@ -2,11 +2,18 @@
 Changelog
 =========
 
+version: 0.2.0
+--------------
+
+* Added the option of a flaring disk in vcdisk
+* Fixed bugs on the normalization of the vertical profiles
+* Added automatic calculation of the normalization of ``rhoz`` with :func:`scipy.integrate.quad`
+* Added vcdisk_alt_Cu93.py, which implements the formula of Cuddeford (1993) for Phi(R,z), i.e. above the plane
+
 version: 0.1.2
 --------------
 
 * Added zenodo DOI.
-
 
 version: 0.1.1
 --------------

@@ -10,8 +10,8 @@ project = 'vcdisk'
 copyright = '2022, Lorenzo Posti'
 author = 'Lorenzo Posti'
 
-release = '0.1'
-version = '0.1.2'
+release = '0.2'
+version = '0.2.0'
 
 # -- General configuration
 
