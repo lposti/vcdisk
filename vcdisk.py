@@ -216,16 +216,7 @@ def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, flaring=False, zsamp='l
     ################
     #
     # checks on rad, sb
-    if type(rad) is list: rad = np.asarray(rad)
-    if type(sb)  is list: sb  = np.asarray(sb)
-    if type(rad) is np.ndarray and type(sb) is np.ndarray:
-        pass
-    else:
-        raise TypeError("rad and sb must be lists or np.arrays")
-    if len(rad)<1 or len(sb)<1:
-        raise ValueError("rad and sb must be arrays of size >1")
-    if len(rad) != len(sb):
-        raise ValueError("rad and sb must be arrays of the same size")
+    rad, sb = check_rad_sb(rad, sb)
 
     # checks on z0
     if type(z0) is float:
@@ -471,10 +462,13 @@ def vcbulge_sph(rad, sb):
 
     """
 
+    # input checks
+    rad, sb = check_rad_sb(rad, sb)
+
     # 3d density rho(r) from surface density I(R)
     # by inverting Abel's integral equation
-    rhom = -1/np.pi * np.array([quad(lambda u: np.interp(m*np.cosh(u), rad, np.gradient(sb,rad)), 0, np.inf)[0]
-                                for m in rad])
+    rhom = -1/np.pi * np.array([quad(lambda u: np.interp(r*np.cosh(u), rad, np.gradient(sb,rad)), 0, np.inf)[0]
+                                for r in rad])
 
     # mass profile
     mass = 4*np.pi * np.array([simpson((rad**2 * rhom)[rad<=R], rad[rad<=R]) for R in rad])
@@ -487,8 +481,113 @@ def vcbulge_sph(rad, sb):
 
 def vcbulge_ellip(rad, sb, q=0.99, inc=0.):
     r"""
-    Docstring for vc_ellip_bulge
+    Circular velocity of a spheroidal oblate bulges of arbitrary surface density.
+
+    This function calculates :math:`V_{\rm bulge}` for a flattened bulge, whose
+    isodensity surfaces :math:`\rho=\rho(m)` are stratified on similar spheroids
+    with :math:`m^2=R^2+(z^2/q^2)`. This is done with an Abel inversion to get
+    the 3D density :math:`\rho(m)` from the observed projected density and
+    then by integration of the 3D density to get the gravitational potential.
+    See e.g. Eq. (2.132) in [BT2008]_.
+
+    :param rad: array of radii in :math:`\rm kpc`.
+    :type rad: list or numpy.ndarray
+    :param sb: array of surface densities in :math:`\rm M_\odot / kpc^2`.
+    :type sb: list or numpy.ndarray
+    :param q: intrinsic axis ratio of the spheroid. This is related to the ellipticity
+        of the observed isophotal contours :math:`\epsilon` and the inclination angle
+        :math:`i` (i.e. the ``inc`` parameter) by
+        :math:`(1-\epsilon)^2 = q^2+(1-q^2)\cos^2 i`. This parameter is :math:`0<q<1`
+        for *oblate* bulges. The spherical case :math:`q=1` is singular in this
+        formulation and will fallback to :py:func:`vcdisk.vcbulge_sph`.
+    :type q: float, optional
+    :param inc: inclination in degrees of the line-of-sight with respect to the
+        symmetry axis of the spheroid. ``inc=0`` is edge-on, ``inc=90`` is face-on.
+    :type inc: float, optional
+    :return: array of :math:`V_{\rm bulge}` velocities in :math:`\rm km/s`.
+    :rtype: numpy.ndarray
+
+    .. seealso::
+
+        :py:func:`vcdisk.vcbulge_sph`
+
+    Notes
+    =====
+
+    This function calculates :math:`V_{\rm bulge}` for a spheroidal bulge, whose
+    isodensity surfaces are stratified on similar spheroids:
+
+    .. math::
+
+        \rho=\rho(m), \qquad {\rm with}\,\,\, m^2=R^2+\frac{z^2}{q^2},
+
+    where :math:`q` is the intrinsic axis ratio. The calculation is done following
+    the formalism of [Noordermeer08]_, using their Eq. (10).
+
+    In practice this is done in two steps. First the 3D density :math:`\rho(m)`
+    is computed with an Abel inversion:
+
+    .. math::
+
+        \rho(m) = -\frac{1}{\pi} \int_m^\infty \frac{{\rm d}I}{{\rm d}R} \frac{{\rm d}R}{\sqrt{R^2-m^2}},
+
+    where :math:`I(R)` is the observed surface density. Since this integral has
+    a singularity at the lower bound of integration, where :math:`R=m`, it is better
+    to change the integration variable to :math:`u={\rm arccosh}{(R/m)}` so that the integral
+    becomes
+
+    .. math::
+
+        \rho(m) = -\frac{1}{\pi} \int_0^\infty I'(m\cosh{u}) {\rm d}u,
+
+    where :math:`I'` is the first derivative of :math:`I`. Then the circular velocity
+    can be computed as
+
+    .. math::
+
+        V_{\rm bulge}(r) = -4\pi\,G\sqrt{\sin^2i+\frac{1}{q}\cos^2i} \int_0^r \frac{m^2\rho(m){\rm d}m}{\sqrt{r^2-e^2m^2}},
+
+    where :math:`e=\sqrt{1-q^2}` is the intrinsic ellipticity. However, also this integral
+    has a singularity at :math:`m=r/e`, thus we change variables to :math:`u=\arcsin{me/r}`
+    and have
+
+    .. math::
+
+        V_{\rm bulge}(r) = -4\pi\,G\frac{r^2}{e^3}\sqrt{\sin^2i+\frac{1}{q}\cos^2i} \int_0^{\arcsin{e}} \rho\left(\frac{r}{e}\sin{u}\right) \sin^2u \,{\rm d}u.
+
+
+    References
+    ----------
+
+    .. [BT2008] Binney & Tremaine (2008), Princeton University Press, NJ USA. Galactic Dynamics: Second Edition.
+    .. [Noordermeer08] Noordermeer (2008), MNRAS, 385, 1359. The rotation curves of flattened Sérsic bulges. `https://ui.adsabs.harvard.edu/abs/2008MNRAS.385.1359N/ <https://ui.adsabs.harvard.edu/abs/2008MNRAS.385.1359N/>`_
+
     """
+
+    # input checks
+    rad, sb = check_rad_sb(rad, sb)
+
+    # checks on q and inc
+    if type(q) is float and type(inc) is float:
+        pass
+    else:
+        try:
+            q = float(q)
+            inc = float(inc)
+        except:
+            raise TypeError("q and inc must be a floats")
+
+    if q<=0.0:
+        raise ValueError("q must be positive")
+    if q>1.0:
+        raise ValueError("q must be <1, can't do prolate bulges")
+    if q==1.0:
+        print ("the spherical case q=1 is handled with vcbulge_sph:")
+        return vcbulge_sph(rad, sb)
+
+    if inc<0.0 or inc>90.0:
+        raise ValueError("the inclination in degrees must be 0 <= inc <= 90")
+
 
     e=np.sqrt(1-q**2)
 
@@ -526,3 +625,27 @@ def vc_sersic_bulge(rad, mb, rb, n, q=0.99, inc=0.):
                                     0, np.arcsin(e))[0]) for R in rad])
 
     return v_circ
+
+
+def check_rad_sb(rad, sb):
+    """
+    Type checks on the common inputs ``rad`` and ``sb``.
+    """
+    if type(rad) is list: rad = np.asarray(rad)
+    if type(sb)  is list: sb  = np.asarray(sb)
+    if type(rad) is np.ndarray and type(sb) is np.ndarray:
+        pass
+    else:
+        raise TypeError("rad and sb must be lists or np.arrays")
+    if len(rad)<1 or len(sb)<1:
+        raise ValueError("rad and sb must be arrays of size >1")
+    if len(rad) != len(sb):
+        raise ValueError("rad and sb must be arrays of the same size")
+
+    # nan check
+    if np.isnan(np.sum(rad)):
+        raise ValueError("there are NaNs in rad. Maybe try with np.nan_to_num(rad)")
+    if np.isnan(np.sum(sb)):
+        raise ValueError("there are NaNs in sb. Maybe try with np.nan_to_num(rad)")
+
+    return rad, sb

@@ -2,6 +2,12 @@
 Changelog
 =========
 
+version: 0.3.0
+--------------
+
+* Added functions for the circular velocity of spherical bulges
+* Added functions for the circular velocity of flattened/oblate bulges
+
 version: 0.2.0
 --------------
 
