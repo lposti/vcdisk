@@ -7,6 +7,8 @@
 
 __all__ = [
     'vcdisk',
+    'vcbulge_sph',
+    'vcbulge_ellip',
     'integrand',
     'vc_thin_expdisk',
 ]
@@ -416,20 +418,74 @@ def vc_thin_expdisk(R, Md, Rd):
     return np.nan_to_num(np.sqrt(2*G_GRAV*Md/Rd*y**2*(i0(y)*k0(y)-i1(y)*k1(y))))
 
 
-def vc_sph_bulge(rad, sb):
+def vcbulge_sph(rad, sb):
     r"""
-    Docstring for vc_sph_bulge
+    Circular velocity of a spherical bulge of arbitrary surface density.
+
+    This function inverts Abel's integral equation to calculate the 3D density
+    of a spherically symmetric bulge from its projected surface density
+    (see Eq. B.72 in [BT2008]_).
+
+    :param rad: array of radii in :math:`\rm kpc`.
+    :type rad: list or numpy.ndarray
+    :param sb: array of surface densities in :math:`\rm M_\odot / kpc^2`.
+    :type sb: list or numpy.ndarray
+    :return: array of :math:`V_{\rm bulge}` velocities in :math:`\rm km/s`.
+    :rtype: numpy.ndarray
+
+    .. seealso::
+
+        :py:func:`vcdisk.vcbulge_ellip`
+
+    Notes
+    =====
+
+    :py:func:`vcdisk.vcbulge_sph` inverts Abel's integral to get the 3D density
+
+    .. math::
+
+        \rho(r) = -\frac{1}{\pi} \int_r^\infty \frac{{\rm d}I}{{\rm d}R} \frac{{\rm d}R}{\sqrt{R^2-r^2}},
+
+    where :math:`I(R)` is the projected surface density. Since this integral has
+    a singularity at the lower bound of integration, where :math:`R=r`, it is better
+    to change the integration variable to :math:`u={\rm arccosh}{(R/r)}` so that the integral
+    becomes
+
+    .. math::
+
+        \rho(r) = -\frac{1}{\pi} \int_0^\infty I'(r\cosh{u}) {\rm d}u,
+
+    where :math:`I'` is the first derivative of :math:`I`. Then, the mass profile
+    can be written as :math:`M(r)=4\pi\int_0^r x^2\rho(x) {\rm d}x` and finally
+    :math:`V_{\rm bulge}(r)=\sqrt{GM(r)/r}.`
+
+    The :math:`\rho(r)` integral is computed with :func:`scipy.integrate.quad`, the
+    derivative of the input surface density profile :math:`I'` is discretized with
+    :func:`numpy.gradient`, and the mass integral is computed with
+    :func:`scipy.integrate.simpson`.
+
+    References
+    ----------
+
+    .. [BT2008] Binney & Tremaine (2008), Princeton University Press, NJ USA. Galactic Dynamics: Second Edition.
+
     """
 
-    rhom = np.array([-1/np.pi* quad(lambda u: np.interp(m*np.cosh(u), rad, np.gradient(sb,rad)), 0, np.inf)[0]
-                     for m in rad])
+    # 3d density rho(r) from surface density I(R)
+    # by inverting Abel's integral equation
+    # e.g. B&T (2008), Eq. (B.72)
+    rhom = -1/np.pi * np.array([quad(lambda u: np.interp(m*np.cosh(u), rad, np.gradient(sb,rad)), 0, np.inf)[0]
+                                for m in rad])
 
-    v_circ = np.sqrt(4*np.pi*G_GRAV / rad * np.array([simpson((rad**2 * rhom)[rad<=R], rad[rad<=R]) for R in rad]))
+    mass = 4*np.pi * np.array([simpson((rad**2 * rhom)[rad<=R], rad[rad<=R]) for R in rad])
+
+    v_circ = np.sqrt(G_GRAV * mass / rad)
 
     return v_circ
 
 
-def vc_ellip_bulge(rad, sb, q=0.99, inc=0.):
+
+def vcbulge_ellip(rad, sb, q=0.99, inc=0.):
     r"""
     Docstring for vc_ellip_bulge
     """
