@@ -473,10 +473,10 @@ def vcbulge_sph(rad, sb):
 
     # 3d density rho(r) from surface density I(R)
     # by inverting Abel's integral equation
-    # e.g. B&T (2008), Eq. (B.72)
     rhom = -1/np.pi * np.array([quad(lambda u: np.interp(m*np.cosh(u), rad, np.gradient(sb,rad)), 0, np.inf)[0]
                                 for m in rad])
 
+    # mass profile
     mass = 4*np.pi * np.array([simpson((rad**2 * rhom)[rad<=R], rad[rad<=R]) for R in rad])
 
     v_circ = np.sqrt(G_GRAV * mass / rad)
