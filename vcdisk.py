@@ -354,9 +354,7 @@ def integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None, flaring=Fal
     if not flaring and rhoz_args is not None:
         try:
             if callable(rhoz) and type(rhoz(z, **rhoz_args)) is np.ndarray:
-                ###
-                # take extra care that rhoz_args is given in the correct positional order!!!
-                ###
+                # note that rhoz_args must be given in the correct positional order!
                 norm = quad(rhoz, 0, np.inf, args=tuple(rhoz_args.values()))[0]
                 rho_uz = smdisk / (2*norm) * rhoz(z, **rhoz_args)
         except:
@@ -416,3 +414,59 @@ def vc_thin_expdisk(R, Md, Rd):
 
     y = R/2./Rd
     return np.nan_to_num(np.sqrt(2*G_GRAV*Md/Rd*y**2*(i0(y)*k0(y)-i1(y)*k1(y))))
+
+
+def vc_sph_bulge(rad, sb):
+    r"""
+    Docstring for vc_sph_bulge
+    """
+
+    rhom = np.array([-1/np.pi* quad(lambda u: np.interp(m*np.cosh(u), rad, np.gradient(sb,rad)), 0, np.inf)[0]
+                     for m in rad])
+
+    v_circ = np.sqrt(4*np.pi*G_GRAV / rad * np.array([simpson((rad**2 * rhom)[rad<=R], rad[rad<=R]) for R in rad]))
+
+    return v_circ
+
+
+def vc_ellip_bulge(rad, sb, q=0.99, inc=0.):
+    r"""
+    Docstring for vc_ellip_bulge
+    """
+
+    e=np.sqrt(1-q**2)
+
+    # B&T (2008), Eq. (2.132)
+    # https://ui.adsabs.harvard.edu/abs/2008MNRAS.385.1359N/abstract, Eq. (10)
+
+    # first get 3d density with Abel integral
+    rhom = np.array([-1/np.pi* np.sqrt(np.sin(np.radians(inc))**2 + np.cos(np.radians(inc))**2/q**2) *
+                     quad(lambda u: np.interp(m*np.cosh(u), rad, np.gradient(sb,rad)), 0, np.inf)[0]
+                     for m in rad])
+
+
+    # then get circular velocity
+#     v_circ = np.sqrt(4*np.pi*G_GRAV * q * np.array([simpson((rad**2 * rhom / np.sqrt(R**2-rad**2*(1-q**2)))[rad<=R],
+#                                                             rad[rad<=R]) for R in rad]))
+    v_circ = np.array([np.sqrt(4*np.pi*G_GRAV * q *
+                               quad(lambda u: np.interp(R/e*np.sin(u), rad, rhom)*R**2/e**3*np.sin(u)**2,
+                                    0, np.arcsin(e))[0]) for R in rad])
+
+    return v_circ
+
+def vc_sersic_bulge(rad, mb, rb, n, q=0.99, inc=0.):
+    r"""
+    Docstring for vc_ellip_bulge
+    """
+
+    e=np.sqrt(1-q**2)
+
+    dIdr = lambda r: -md/(2*np.pi*rd**3*n) * np.exp(-(r/rb)**(1/n)) * (r/rb)**(1/n-1)
+    rhom = np.array([-1/np.pi * np.sqrt(np.sin(np.radians(inc))**2 + np.cos(np.radians(inc))**2/q**2) *
+                     quad(lambda u: dIdr(m*np.cosh(u)), 0, np.inf)[0] for m in rad])
+
+    v_circ = np.array([np.sqrt(4*np.pi*G_GRAV * q *
+                               quad(lambda u: np.interp(R/e*np.sin(u), rad, rhom)*R**2/e**3*np.sin(u)**2,
+                                    0, np.arcsin(e))[0]) for R in rad])
+
+    return v_circ

@@ -8,7 +8,7 @@
 # https://articles.adsabs.harvard.edu/pdf/1993MNRAS.262.1076C
 # The derivation of the formula with K instead of Q_-1/2 is due to a transformation
 # of eq. (27) following Byrd & Friedman (1971), page 248 eq 560.01, which I found
-# in https://gitlab.com/iogiul/galpynamics/-/wikis/Potential-of-discs 
+# in https://gitlab.com/iogiul/galpynamics/-/wikis/Potential-of-discs
 #
 
 import numpy as np
@@ -104,9 +104,7 @@ def intfunc_Cu93(u, lp, R, z, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None, flari
     if not flaring and rhoz_args is not None:
         try:
             if callable(rhoz) and type(rhoz(z, **rhoz_args)) is np.ndarray:
-                ###
-                # take extra care that rhoz_args is given in the correct positional order!!!
-                ###
+                # note that rhoz_args must be given in the correct positional order!
                 norm = quad(rhoz, 0, np.inf, args=tuple(rhoz_args.values()))[0]
                 rho_uz = smdisk / (2*norm) * rhoz(np.abs(l), **rhoz_args)
         except:
