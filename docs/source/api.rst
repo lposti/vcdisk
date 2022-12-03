@@ -7,7 +7,8 @@ API
    :nosignatures:
 
    vcdisk
+   integrand
    vcbulge_sph
    vcbulge_ellip
+   vcbulge_sersic
    vc_thin_expdisk
-   integrand

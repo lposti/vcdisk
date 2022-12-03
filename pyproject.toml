@@ -12,7 +12,7 @@ py-modules = ['vcdisk']
 [project]
 name = "vcdisk"
 authors = [{name = "Lorenzo Posti", email = "lorenzo.posti@gmail.com"}]
-version = "0.2.0"
+version = "0.3.0"
 description = "Circular velocities of thick galaxy disks"
 readme = "README.md"
 license = { text = "BSD-2" }

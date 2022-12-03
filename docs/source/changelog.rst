@@ -7,6 +7,8 @@ version: 0.3.0
 
 * Added functions for the circular velocity of spherical bulges
 * Added functions for the circular velocity of flattened/oblate bulges
+* Added functions for the circular velocity of flattened Sersic profiles
+* Added common type check function
 
 version: 0.2.0
 --------------

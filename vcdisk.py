@@ -382,7 +382,7 @@ def vc_thin_expdisk(R, Md, Rd):
     References
     ----------
 
-    .. [Freeman70] Freeman (1970), ApJ, 160, 811. On the Disks of Spiral and S0 Galaxies. `https://ui.adsabs.harvard.edu/abs/1970ApJ...160..811F/ <https://ui.adsabs.harvard.edu/abs/1970ApJ...160..811F/>`_
+    .. [Freeman70] Freeman, 1970, ApJ, 160, 811. On the Disks of Spiral and S0 Galaxies. `https://ui.adsabs.harvard.edu/abs/1970ApJ...160..811F/ <https://ui.adsabs.harvard.edu/abs/1970ApJ...160..811F/>`_
 
     """
 
@@ -458,7 +458,7 @@ def vcbulge_sph(rad, sb):
     References
     ----------
 
-    .. [BT2008] Binney & Tremaine (2008), Princeton University Press, NJ USA. Galactic Dynamics: Second Edition.
+    .. [BT2008] Binney & Tremaine, 2008, Princeton University Press, NJ USA. Galactic Dynamics: Second Edition.
 
     """
 
@@ -481,7 +481,7 @@ def vcbulge_sph(rad, sb):
 
 def vcbulge_ellip(rad, sb, q=0.99, inc=0.):
     r"""
-    Circular velocity of a spheroidal oblate bulges of arbitrary surface density.
+    Circular velocity of a spheroidal oblate bulge of arbitrary surface density.
 
     This function calculates :math:`V_{\rm bulge}` for a flattened bulge, whose
     isodensity surfaces :math:`\rho=\rho(m)` are stratified on similar spheroids
@@ -509,7 +509,7 @@ def vcbulge_ellip(rad, sb, q=0.99, inc=0.):
 
     .. seealso::
 
-        :py:func:`vcdisk.vcbulge_sph`
+        :py:func:`vcdisk.vcbulge_sph`, :py:func:`vcdisk.vcbulge_sersic`
 
     Notes
     =====
@@ -540,27 +540,31 @@ def vcbulge_ellip(rad, sb, q=0.99, inc=0.):
 
         \rho(m) = -\frac{1}{\pi} \int_0^\infty I'(m\cosh{u}) {\rm d}u,
 
-    where :math:`I'` is the first derivative of :math:`I`. Then the circular velocity
-    can be computed as
+    where :math:`I'` is the first derivative of :math:`I`. With the 3D density :math:`\rho(m)`
+    at hand, the circular velocity can then be computed as
 
     .. math::
 
-        V_{\rm bulge}(r) = -4\pi\,G\sqrt{\sin^2i+\frac{1}{q}\cos^2i} \int_0^r \frac{m^2\rho(m){\rm d}m}{\sqrt{r^2-e^2m^2}},
+        V^2_{\rm bulge}(r) = -4\pi\,Gq\sqrt{\sin^2i+\frac{1}{q}\cos^2i} \int_0^r \frac{m^2\rho(m){\rm d}m}{\sqrt{r^2-e^2m^2}},
 
     where :math:`e=\sqrt{1-q^2}` is the intrinsic ellipticity. However, also this integral
-    has a singularity at :math:`m=r/e`, thus we change variables to :math:`u=\arcsin{me/r}`
-    and have
+    has a singularity at :math:`m=r/e`, thus it is convenient to change variables to
+    :math:`u=\arcsin{me/r}` so that
 
     .. math::
 
-        V_{\rm bulge}(r) = -4\pi\,G\frac{r^2}{e^3}\sqrt{\sin^2i+\frac{1}{q}\cos^2i} \int_0^{\arcsin{e}} \rho\left(\frac{r}{e}\sin{u}\right) \sin^2u \,{\rm d}u.
+        V^2_{\rm bulge}(r) = -4\pi\,Gq\frac{r^2}{e^3}\sqrt{\sin^2i+\frac{1}{q}\cos^2i} \int_0^{\arcsin{e}} \rho\left(\frac{r}{e}\sin{u}\right) \sin^2u \,{\rm d}u.
+
+    Both the :math:`\rho(m)` and the :math:`V_{\rm bulge}` integrals are computed
+    with :func:`scipy.integrate.quad` and the derivative of the input surface density
+    profile :math:`I'` is discretized with :func:`numpy.gradient`.
 
 
     References
     ----------
 
-    .. [BT2008] Binney & Tremaine (2008), Princeton University Press, NJ USA. Galactic Dynamics: Second Edition.
-    .. [Noordermeer08] Noordermeer (2008), MNRAS, 385, 1359. The rotation curves of flattened Sérsic bulges. `https://ui.adsabs.harvard.edu/abs/2008MNRAS.385.1359N/ <https://ui.adsabs.harvard.edu/abs/2008MNRAS.385.1359N/>`_
+    .. [BT2008] Binney & Tremaine, 2008, Princeton University Press, NJ USA. Galactic Dynamics: Second Edition.
+    .. [Noordermeer08] Noordermeer, 2008, MNRAS, 385, 1359. The rotation curves of flattened Sérsic bulges. `https://ui.adsabs.harvard.edu/abs/2008MNRAS.385.1359N/ <https://ui.adsabs.harvard.edu/abs/2008MNRAS.385.1359N/>`_
 
     """
 
@@ -588,30 +592,101 @@ def vcbulge_ellip(rad, sb, q=0.99, inc=0.):
     if inc<0.0 or inc>90.0:
         raise ValueError("the inclination in degrees must be 0 <= inc <= 90")
 
-
+    # intrinsic ellipticity
     e=np.sqrt(1-q**2)
 
-    # B&T (2008), Eq. (2.132)
-    # https://ui.adsabs.harvard.edu/abs/2008MNRAS.385.1359N/abstract, Eq. (10)
+    # geometric factor
+    # see Sec. 2.1 in Noordermeer (2008)
+    geom_factor = np.sqrt(np.sin(np.radians(inc))**2 + np.cos(np.radians(inc))**2/q**2)
 
     # first get 3d density with Abel integral
-    rhom = np.array([-1/np.pi* np.sqrt(np.sin(np.radians(inc))**2 + np.cos(np.radians(inc))**2/q**2) *
+    rhom = np.array([-1/np.pi * geom_factor *
                      quad(lambda u: np.interp(m*np.cosh(u), rad, np.gradient(sb,rad)), 0, np.inf)[0]
                      for m in rad])
 
 
     # then get circular velocity
-#     v_circ = np.sqrt(4*np.pi*G_GRAV * q * np.array([simpson((rad**2 * rhom / np.sqrt(R**2-rad**2*(1-q**2)))[rad<=R],
-#                                                             rad[rad<=R]) for R in rad]))
     v_circ = np.array([np.sqrt(4*np.pi*G_GRAV * q *
-                               quad(lambda u: np.interp(R/e*np.sin(u), rad, rhom)*R**2/e**3*np.sin(u)**2,
-                                    0, np.arcsin(e))[0]) for R in rad])
+                               quad(lambda u: np.interp(r/e*np.sin(u), rad, rhom)*r**2/e**3*np.sin(u)**2,
+                                    0, np.arcsin(e))[0]) for r in rad])
 
     return v_circ
 
-def vc_sersic_bulge(rad, mb, rb, n, q=0.99, inc=0.):
+def vcbulge_sersic(rad, mb, rb, n, q=0.99, inc=0.):
     r"""
-    Docstring for vc_ellip_bulge
+    Circular velocity of a flattened Sersic bulge.
+
+    This is the same as :py:func:`vcdisk.vcbulge_ellip`, but for an analytic
+    [Sersic68]_ surface density profile. The implementation follows Eq.s
+    (10)-(14) in [Noordermeer08]_.
+
+    :param rad: array of radii in :math:`\rm kpc`.
+    :type rad: list or numpy.ndarray
+    :param mb: total mass in :math:`\rm M_\odot` of the Sersic bulge.
+    :type mb: float
+    :param rb: scale-radius in :math:`\rm kpc` of the Sersic bulge.
+    :type rb: float
+    :param n: Sersic index, :math:`\rm 0 < n \leq 8`.
+    :type n: float
+    :param q: intrinsic axis ratio of the spheroid. This is related to the ellipticity
+        of the observed isophotal contours :math:`\epsilon` and the inclination angle
+        :math:`i` (i.e. the ``inc`` parameter) by
+        :math:`(1-\epsilon)^2 = q^2+(1-q^2)\cos^2 i`. This parameter is :math:`0<q<1`
+        for *oblate* bulges. The spherical case :math:`q=1` is singular in this
+        formulation and will fallback to :py:func:`vcdisk.vcbulge_sph`.
+    :type q: float, optional
+    :param inc: inclination in degrees of the line-of-sight with respect to the
+        symmetry axis of the spheroid. ``inc=0`` is edge-on, ``inc=90`` is face-on.
+    :type inc: float, optional
+    :return: array of :math:`V_{\rm bulge}` velocities in :math:`\rm km/s`.
+    :rtype: numpy.ndarray
+
+    .. seealso::
+
+        :py:func:`vcdisk.vcbulge_ellip`, :py:func:`vcdisk.vcbulge_sph`
+
+    Notes
+    =====
+
+    This function calculates :math:`V_{\rm bulge}` for a spheroidal bulge, whose
+    observed surface density can be approximated with a Sersic profile
+
+    .. math::
+
+        I(R) = I_0 \exp\left[ - \left( \frac{R}{R_0}\right)^{1/n}\right],
+
+    where :math:`I_0` is the central surface density, :math:`n` is the Sersic index
+    which determines the concentration of the density profile, and :math:`R_0`
+    is a characteristic radius. The derivative of :math:`I(R)` is also analytic:
+
+    .. math::
+
+        \frac{{\rm d}I}{{\rm d}R} = -\frac{I_0}{nR_0} \exp\left[ - \left( \frac{R}{R_0}\right)^{1/n}\right] \left( \frac{R}{R_0}\right)^{1/n-1}.
+
+    With this expression, the circular velocity profile of the bulge becomes
+    (e.g. Eq. 2.132 in [BT2008]_):
+
+    .. math::
+
+        V^2_{\rm bulge}(r) = \mathcal{C} \int_0^r \left[ \int_m^\infty \frac{e^{-(R/R_0)^{1/n}}(R/R_0)^{1/n-1}}{\sqrt{R^2-m^2}} {\rm d}R \right]\frac{m^2}{\sqrt{r^2-e^2m^2}}{\rm d}m,
+
+    .. math::
+
+        \mathcal{C} = \frac{4\,G q I_0}{nR_0} \sqrt{\sin^2i+\frac{1}{q}\cos^2i}.
+
+    As in :py:func:`vcdisk.vcbulge_ellip`, it is convenient to change integration
+    variables since both integrals present singularities: :math:`u={\rm arccosh}{(R/m)}`
+    is used for the inner integral in :math:`{\rm d}R`, while :math:`t=\arcsin{me/r}`
+    is used for the outer integral in :math:`{\rm d}m`.
+
+    References
+    ----------
+
+    .. [BT2008] Binney & Tremaine, 2008, Princeton University Press, NJ USA. Galactic Dynamics: Second Edition.
+    .. [Noordermeer08] Noordermeer, 2008, MNRAS, 385, 1359. The rotation curves of flattened Sérsic bulges. `https://ui.adsabs.harvard.edu/abs/2008MNRAS.385.1359N/ <https://ui.adsabs.harvard.edu/abs/2008MNRAS.385.1359N/>`_
+    .. [Sersic68] Sersic, 1968, Argentina: Observatorio Astronomico. Atlas de Galaxias Australes. `https://ui.adsabs.harvard.edu/abs/1968adga.book.....S/ <https://ui.adsabs.harvard.edu/abs/1968adga.book.....S/>`_
+
+
     """
 
     e=np.sqrt(1-q**2)
@@ -646,6 +721,6 @@ def check_rad_sb(rad, sb):
     if np.isnan(np.sum(rad)):
         raise ValueError("there are NaNs in rad. Maybe try with np.nan_to_num(rad)")
     if np.isnan(np.sum(sb)):
-        raise ValueError("there are NaNs in sb. Maybe try with np.nan_to_num(rad)")
+        raise ValueError("there are NaNs in sb. Maybe try with np.nan_to_num(sb)")
 
     return rad, sb
