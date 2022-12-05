@@ -43,3 +43,6 @@ html_theme = 'classic'
 
 # -- Options for EPUB output
 epub_show_urls = 'footnote'
+
+# autodoc options
+autodoc_default_options = {'members': True, 'special-members': '__call__',}

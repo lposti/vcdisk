@@ -1,4 +1,4 @@
-# vcdisk: Rotation curves of thick truncated galaxy disks
+# vcdisk: Rotation curves of thick galaxy disks and flattened spheroids
 #
 # author: Lorenzo Posti <lorenzo.posti@gmail.com>
 # license: BSD-2
@@ -16,7 +16,7 @@ __all__ = [
 
 import numpy as np
 from scipy.integrate import simpson, quad
-from scipy.special import ellipk, ellipe, i0, i1, k0, k1
+from scipy.special import ellipk, ellipe, i0, i1, k0, k1, gamma
 
 # constants
 G_GRAV = 4.301e-6 # kpc km^2 s^-2 M_sun^-1
@@ -219,13 +219,7 @@ def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, flaring=False, zsamp='l
     rad, sb = check_rad_sb(rad, sb)
 
     # checks on z0
-    if type(z0) is float:
-        pass
-    else:
-        try:
-            z0 = float(z0)
-        except:
-            raise TypeError("z0 must be a float")
+    z0 = check_float(z0, 'z0')
 
     # vertical sampling
     xi = None
@@ -316,12 +310,6 @@ def integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None, flaring=Fal
     Note that here I actually use the notation of Eq. (A17), which is
     equivalent to Eq. (4).
     This function is called by the main function :py:func:`vcdisk.vcdisk`.
-
-    References
-    ----------
-
-    .. [Casertano83] Casertano, 1983, MNRAS, 203, 735. Rotation curve of the edge-on spiral galaxy NGC 5907: disc and halo masses. `doi:10.1093/mnras/203.3.735 <https://doi.org/10.1093/mnras/203.3.735>`_
-
 
     """
     z = xi[:,None]
@@ -563,7 +551,6 @@ def vcbulge_ellip(rad, sb, q=0.99, inc=0.):
     References
     ----------
 
-    .. [BT2008] Binney & Tremaine, 2008, Princeton University Press, NJ USA. Galactic Dynamics: Second Edition.
     .. [Noordermeer08] Noordermeer, 2008, MNRAS, 385, 1359. The rotation curves of flattened Sérsic bulges. `https://ui.adsabs.harvard.edu/abs/2008MNRAS.385.1359N/ <https://ui.adsabs.harvard.edu/abs/2008MNRAS.385.1359N/>`_
 
     """
@@ -572,25 +559,7 @@ def vcbulge_ellip(rad, sb, q=0.99, inc=0.):
     rad, sb = check_rad_sb(rad, sb)
 
     # checks on q and inc
-    if type(q) is float and type(inc) is float:
-        pass
-    else:
-        try:
-            q = float(q)
-            inc = float(inc)
-        except:
-            raise TypeError("q and inc must be a floats")
-
-    if q<=0.0:
-        raise ValueError("q must be positive")
-    if q>1.0:
-        raise ValueError("q must be <1, can't do prolate bulges")
-    if q==1.0:
-        print ("the spherical case q=1 is handled with vcbulge_sph:")
-        return vcbulge_sph(rad, sb)
-
-    if inc<0.0 or inc>90.0:
-        raise ValueError("the inclination in degrees must be 0 <= inc <= 90")
+    q, inc = check_q_inc(q, inc)
 
     # intrinsic ellipticity
     e=np.sqrt(1-q**2)
@@ -612,7 +581,7 @@ def vcbulge_ellip(rad, sb, q=0.99, inc=0.):
 
     return v_circ
 
-def vcbulge_sersic(rad, mb, rb, n, q=0.99, inc=0.):
+def vcbulge_sersic(rad, mtot, re, n, q=0.99, inc=0.):
     r"""
     Circular velocity of a flattened Sersic bulge.
 
@@ -622,10 +591,10 @@ def vcbulge_sersic(rad, mb, rb, n, q=0.99, inc=0.):
 
     :param rad: array of radii in :math:`\rm kpc`.
     :type rad: list or numpy.ndarray
-    :param mb: total mass in :math:`\rm M_\odot` of the Sersic bulge.
-    :type mb: float
-    :param rb: scale-radius in :math:`\rm kpc` of the Sersic bulge.
-    :type rb: float
+    :param mtot: total mass in :math:`\rm M_\odot` of the Sersic bulge.
+    :type mtot: float
+    :param re: effective radius in :math:`\rm kpc` of the Sersic bulge.
+    :type re: float
     :param n: Sersic index, :math:`\rm 0 < n \leq 8`.
     :type n: float
     :param q: intrinsic axis ratio of the spheroid. This is related to the ellipticity
@@ -643,7 +612,7 @@ def vcbulge_sersic(rad, mb, rb, n, q=0.99, inc=0.):
 
     .. seealso::
 
-        :py:func:`vcdisk.vcbulge_ellip`, :py:func:`vcdisk.vcbulge_sph`
+        :py:func:`vcdisk.vcbulge_ellip`, :py:func:`vcdisk.vcbulge_sph`, :py:class:`vcdisk.sersic`
 
     Notes
     =====
@@ -653,26 +622,27 @@ def vcbulge_sersic(rad, mb, rb, n, q=0.99, inc=0.):
 
     .. math::
 
-        I(R) = I_0 \exp\left[ - \left( \frac{R}{R_0}\right)^{1/n}\right],
+        I(R) = I_e \exp\left\{ -b_n\left[\left(\frac{R}{R_e}\right)^\frac{1}{n}-1\right] \right\},
 
-    where :math:`I_0` is the central surface density, :math:`n` is the Sersic index
-    which determines the concentration of the density profile, and :math:`R_0`
-    is a characteristic radius. The derivative of :math:`I(R)` is also analytic:
-
-    .. math::
-
-        \frac{{\rm d}I}{{\rm d}R} = -\frac{I_0}{nR_0} \exp\left[ - \left( \frac{R}{R_0}\right)^{1/n}\right] \left( \frac{R}{R_0}\right)^{1/n-1}.
-
-    With this expression, the circular velocity profile of the bulge becomes
-    (e.g. Eq. 2.132 in [BT2008]_):
+    where :math:`R_e` is the effective radius, i.e. the radius containing half the
+    total mass of the spheroid, :math:`I_e` is the surface density at the effective
+    radius, and :math:`n` is the Sersic index, which determines the concentration
+    of the density profile. The derivative of :math:`I(R)` is also analytic:
 
     .. math::
 
-        V^2_{\rm bulge}(r) = \mathcal{C} \int_0^r \left[ \int_m^\infty \frac{e^{-(R/R_0)^{1/n}}(R/R_0)^{1/n-1}}{\sqrt{R^2-m^2}} {\rm d}R \right]\frac{m^2}{\sqrt{r^2-e^2m^2}}{\rm d}m,
+        \frac{{\rm d}I(R)}{{\rm d}R} = -\frac{I_e\,b_n}{n\,R_e} \exp\left\{ -b_n\left[\left(\frac{R}{R_e}\right)^\frac{1}{n}-1\right] \right\} \left(\frac{R}{R_e}\right)^{\frac{1}{n}-1}.
+
+    With this expression, recalling that :math:`e=\sqrt{1-q^2}` is the intrinsic ellipticity,
+    the circular velocity profile of the bulge becomes (e.g. Eq. 2.132 in [BT2008]_):
 
     .. math::
 
-        \mathcal{C} = \frac{4\,G q I_0}{nR_0} \sqrt{\sin^2i+\frac{1}{q}\cos^2i}.
+        V^2_{\rm bulge}(r) = \mathcal{C} \int_0^r \left[ \int_m^\infty \frac{ \exp\left\{ -b_n\left[\left(R/R_e\right)^{1/n}-1\right] \right\} \left(R/R_e\right)^{1/n-1} }{\sqrt{R^2-m^2}} {\rm d}R \right]\frac{m^2}{\sqrt{r^2-e^2m^2}}{\rm d}m,
+
+    .. math::
+
+        \mathcal{C} = \frac{4\,G q I_e\,b_n}{nR_e} \sqrt{\sin^2i+\frac{1}{q}\cos^2i}.
 
     As in :py:func:`vcdisk.vcbulge_ellip`, it is convenient to change integration
     variables since both integrals present singularities: :math:`u={\rm arccosh}{(R/m)}`
@@ -682,24 +652,105 @@ def vcbulge_sersic(rad, mb, rb, n, q=0.99, inc=0.):
     References
     ----------
 
-    .. [BT2008] Binney & Tremaine, 2008, Princeton University Press, NJ USA. Galactic Dynamics: Second Edition.
-    .. [Noordermeer08] Noordermeer, 2008, MNRAS, 385, 1359. The rotation curves of flattened Sérsic bulges. `https://ui.adsabs.harvard.edu/abs/2008MNRAS.385.1359N/ <https://ui.adsabs.harvard.edu/abs/2008MNRAS.385.1359N/>`_
     .. [Sersic68] Sersic, 1968, Argentina: Observatorio Astronomico. Atlas de Galaxias Australes. `https://ui.adsabs.harvard.edu/abs/1968adga.book.....S/ <https://ui.adsabs.harvard.edu/abs/1968adga.book.....S/>`_
 
 
     """
 
+    # check rad
+    if type(rad) is list: rad = np.asarray(rad)
+    if type(rad) is np.ndarray:
+        pass
+    else:
+        raise TypeError("rad must be a list or np.array")
+    if len(rad)<1:
+        raise ValueError("rad must be an array of size >1")
+    if np.isnan(np.sum(rad)):
+        raise ValueError("there are NaNs in rad. Maybe try with np.nan_to_num(rad)")
+
+    # checks on m, re, n
+    mtot = check_float(mtot, 'mtot')
+    re   = check_float(re, 're')
+    n    = check_float(n,  'n')
+
+    if n<=0 or n>8:
+        raise ValueError("n must be 0 < n <= 8")
+
+    # checks on q and inc
+    q, inc = check_q_inc(q, inc)
+
     e=np.sqrt(1-q**2)
 
-    dIdr = lambda r: -md/(2*np.pi*rd**3*n) * np.exp(-(r/rb)**(1/n)) * (r/rb)**(1/n-1)
+    sers = sersic(mtot, re, n)
     rhom = np.array([-1/np.pi * np.sqrt(np.sin(np.radians(inc))**2 + np.cos(np.radians(inc))**2/q**2) *
-                     quad(lambda u: dIdr(m*np.cosh(u)), 0, np.inf)[0] for m in rad])
+                     quad(lambda u: sers.deriv(m*np.cosh(u)), 0, np.inf)[0] for m in rad])
 
     v_circ = np.array([np.sqrt(4*np.pi*G_GRAV * q *
                                quad(lambda u: np.interp(R/e*np.sin(u), rad, rhom)*R**2/e**3*np.sin(u)**2,
                                     0, np.arcsin(e))[0]) for R in rad])
 
     return v_circ
+
+
+class sersic():
+    r"""
+    Class for Sersic profiles.
+
+    This class creates a [Sersic68]_ profile from the total mass, the effective
+    radius (i.e. the radius containing 50% of the total mass), and the Sersic
+    index. It has two implemented methods:
+
+    * ``__call__`` returns the value
+
+    .. math::
+
+        I(R) = I_e \exp\left\{ -b_n\left[\left(\frac{R}{R_e}\right)^\frac{1}{n}-1\right] \right\},
+
+    * ``deriv`` returns the first derivative
+
+    .. math::
+        \frac{{\rm d}I(R)}{{\rm d}R} = -\frac{I_e\,b_n}{n\,R_e} \exp\left\{ -b_n\left[\left(\frac{R}{R_e}\right)^\frac{1}{n}-1\right] \right\} \left(\frac{R}{R_e}\right)^{\frac{1}{n}-1},
+
+    where :math:`b_n = 2n -1/3 + (4/405)n^{-1} + o(n^{-2})` (see [CiottiBertin1999]_) and
+    :math:`I_e` is the surface density at the effective radius :math:`R_e` and it is
+    related to the total mass as
+
+    .. math::
+
+        I_e = \frac{M}{2\pi n R_e^2} \frac{b_n^{2n}}{e^{b_n}\Gamma(2n)},
+
+    where :math:`\Gamma` is the complete gamma function (see [GrahamDriver05]_).
+
+    :param mtot: total mass in :math:`\rm M_\odot`.
+    :type mtot: float
+    :param re: effective radius in :math:`\rm kpc`.
+    :type re: float
+    :param n: Sersic index :math:`0 < n \leq 8`.
+    :type n: float
+
+    References
+    ----------
+
+    .. [CiottiBertin1999] Ciotti & Bertin, 1999, A&A, 352, 447. Analytical properties of the :math:`R^{1/m}` law. `https://ui.adsabs.harvard.edu/abs/1999A%26A...352..447C/ <https://ui.adsabs.harvard.edu/abs/1999A%26A...352..447C/>`_
+    .. [GrahamDriver05] Graham & Driver, 2005, PASA, 22, 118. A Concise Reference to (Projected) Sérsic :math:`R^{1/n}` Quantities, Including Concentration, Profile Slopes, Petrosian Indices, and Kron Magnitudes `https://doi.org/10.1071/AS05001 <https://doi.org/10.1071/AS05001>`_
+
+    """
+    def __init__(self, mtot, re, n):
+        self.mtot, self.re, self.n = mtot, re, n
+        self.bn = 2*self.n -1./3. +4./405./self.n
+        self.Ie = self.mtot / (2*np.pi*self.n*self.re**2) * self.bn**(2*self.n) / np.exp(self.bn) / gamma(2*self.n)
+
+    def __call__(self, R):
+        """
+        Returns the value :math:`I(R)`
+        """
+        return self.Ie * np.exp(-self.bn * ((R/self.re)**(1/self.n)-1))
+
+    def deriv(self, R):
+        """
+        Returns the value :math:`I'(R)`
+        """
+        return -self.Ie*self.bn/(self.n*self.re) * np.exp(-self.bn*((R/self.re)**(1/self.n)-1)) * (R/self.re)**(1/self.n-1.0)
 
 
 def check_rad_sb(rad, sb):
@@ -724,3 +775,37 @@ def check_rad_sb(rad, sb):
         raise ValueError("there are NaNs in sb. Maybe try with np.nan_to_num(sb)")
 
     return rad, sb
+
+def check_float(x, name):
+    """
+    Type check on float
+    """
+    if type(x) is float:
+        pass
+    else:
+        try:
+            x = float(x)
+        except:
+            raise TypeError(name+" must be a float")
+
+    return x
+
+def check_q_inc(q, inc):
+    """
+    Type checks on the common inputs ``q`` and ``inc``.
+    """
+    q   = check_float(q, 'q')
+    inc = check_float(inc, 'inc')
+
+    if q<=0.0:
+        raise ValueError("q must be positive")
+    if q>1.0:
+        raise ValueError("q must be <1, can't do prolate bulges")
+    if q==1.0:
+        print ("the spherical case q=1 is handled with vcbulge_sph:")
+        return vcbulge_sph(rad, sb)
+
+    if inc<0.0 or inc>90.0:
+        raise ValueError("the inclination in degrees must be 0 <= inc <= 90")
+
+    return q, inc

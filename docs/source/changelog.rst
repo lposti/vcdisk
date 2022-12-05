@@ -9,6 +9,7 @@ version: 0.3.0
 * Added functions for the circular velocity of flattened/oblate bulges
 * Added functions for the circular velocity of flattened Sersic profiles
 * Added common type check function
+* Added :py:class:`vcdisk.sersic` class for Sersic profiles
 
 version: 0.2.0
 --------------
