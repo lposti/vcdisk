@@ -1,13 +1,21 @@
-``vcdisk``: Rotation curves of thick galaxy disks
-#################################################
+``vcdisk``: Rotation curves of disk galaxies
+############################################
 
-A minimal python module to solve Poisson's equation in a thick galactic disk.
-This is useful to compute the circular velocity on the disk plane of a galaxy
-with observed surface density profile and arbitrary, user-defined vertical profile.
+A minimal python module to solve Poisson's equation in galactic disks.
+This is useful to compute i) the circular velocity of a **thick galaxy disk**
+with arbitrary surface density and vertical profiles, and ii) the circular
+velocity of a **flattened bulge** with arbitrary surface density.
 
-:py:func:`~vcdisk.vcdisk` implements the algorithm of [Casertano83]_, which calculates
-the radial force on the disk plane as a 2-D integral (their Eq. 4) and then derives
-the velocity of a circular orbit on the disk plane.
+The ``vcdisk`` module is a compact toolbox indispensable for modelling
+galaxy rotation curves, since it allows to determine the gravitational field
+of the observed baryonic matter (stars, gas, dust etc.) just from photometric
+observations, with minimal assumptions.
+
+:py:func:`~vcdisk.vcdisk` calculates the radial force on the disk plane of a
+thick disk component, with an arbitrarily sampled surface density profile and a
+user-defined vertical density profile. :py:func:`~vcdisk.vcbulge_ellip` computes
+the gravitational field on the mid-plane of an axisymmetric spheroidal oblate (or
+spherical) bulge component, with an arbitrarily sampled surface density profile.
 
 .. image:: vcdisk_banner.png
 
@@ -36,8 +44,3 @@ Reference/API
 
   api
   changelog
-
-References
-==========
-
-.. [Casertano83] Casertano, 1983, MNRAS, 203, 735. https://ui.adsabs.harvard.edu/abs/1983MNRAS.203..735C
