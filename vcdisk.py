@@ -9,6 +9,8 @@ __all__ = [
     'vcdisk',
     'vcbulge_sph',
     'vcbulge_ellip',
+    'vcbulge_sersic',
+    'sersic',
     'integrand',
     'vc_thin_expdisk',
 ]
@@ -24,6 +26,7 @@ G_GRAV = 4.301e-6 # kpc km^2 s^-2 M_sun^-1
 def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, flaring=False, zsamp='log', rsamp='log'):
     r"""
     Circular velocity of a thick disk of arbitrary surface density.
+
     This function uses the method of [Casertano83]_ to calculate
     the radial force on the disk plane and then the circular velocity.
 
@@ -263,7 +266,8 @@ def vcdisk(rad, sb, z0=0.3, rhoz='cosh', rhoz_args=None, flaring=False, zsamp='l
 
 def integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None, flaring=False):
     r"""
-    Integrand function for the radial force integral.
+    Integrand function for the radial force integral in :py:func:`vcdisk.vcdisk`.
+
     This is the integrand Eq. (4) of [Casertano83]_.
 
     :param u: radial variable of integration in :math:`\rm kpc`.
@@ -352,18 +356,18 @@ def integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None, flaring=Fal
     return 2/np.pi*np.sqrt(u/r*p) * (ellipk(p) - ellipe(p)) * drho_du
 
 
-def vc_thin_expdisk(R, Md, Rd):
+def vc_thin_expdisk(r, md, rd):
     r"""
     Circular velocity of an infinitely thin exponential disk.
     See [Freeman70]_, Eq. (10).
 
-    :param R: radii in :math:`\rm kpc`.
-    :type R: float or list or numpy.ndarray
-    :param Md: disk mass in :math:`\rm M_\odot`.
-    :type Md: float
-    :param Rd: exponential scale-length of the disk in :math:`\rm kpc`
-    :type Rd: float
-    :return: 1-D array (same shape as R) of the circular velocities
+    :param r: radii in :math:`\rm kpc`.
+    :type r: float or list or numpy.ndarray
+    :param md: disk mass in :math:`\rm M_\odot`.
+    :type md: float
+    :param rd: exponential scale-length of the disk in :math:`\rm kpc`
+    :type rd: float
+    :return: 1-D array (same shape as ``r``) of the circular velocities
         in :math:`\rm km/s`.
     :rtype: float or numpy.ndarray
 
@@ -374,27 +378,23 @@ def vc_thin_expdisk(R, Md, Rd):
 
     """
 
-    # checks on input
-    if type(R) is list: R = np.asarray(R)
-    if type(R) is np.ndarray:
+    # check rad
+    if type(r) is list: r = np.asarray(r)
+    if type(r) is np.ndarray:
         pass
     else:
-        try:
-            assert type(float(R)) is float
-        except:
-            raise TypeError("R must be a float scalar, a list of floats or a np.array")
+        raise TypeError("r must be a list or np.array")
+    if len(r)<1:
+        raise ValueError("r must be an array of size >1")
+    if np.isnan(np.sum(r)):
+        raise ValueError("there are NaNs in r. Maybe try with np.nan_to_num(r)")
 
-    if type(R) is np.ndarray and len(R)<1:
-        raise ValueError("the size of the R array must be >0")
+    # check md, rd
+    md = check_float(md, 'md')
+    rd = check_float(rd, 'rd')
 
-    try:
-        assert type(float(Md)) is float
-        assert type(float(Rd)) is float
-    except:
-        raise TypeError("Md and Rd must be float scalars")
-
-    y = R/2./Rd
-    return np.nan_to_num(np.sqrt(2*G_GRAV*Md/Rd*y**2*(i0(y)*k0(y)-i1(y)*k1(y))))
+    y = r/2./rd
+    return np.nan_to_num(np.sqrt(2*G_GRAV*md/rd*y**2*(i0(y)*k0(y)-i1(y)*k1(y))))
 
 
 def vcbulge_sph(rad, sb):
