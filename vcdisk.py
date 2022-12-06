@@ -17,8 +17,11 @@ __all__ = [
 
 
 import numpy as np
-from scipy.integrate import simpson, quad
+from scipy.integrate import simpson, quad, IntegrationWarning
 from scipy.special import ellipk, ellipe, i0, i1, k0, k1, gamma
+
+import warnings
+warnings.filterwarnings("ignore", category=IntegrationWarning)
 
 # constants
 G_GRAV = 4.301e-6 # kpc km^2 s^-2 M_sun^-1
@@ -455,8 +458,9 @@ def vcbulge_sph(rad, sb):
 
     # 3d density rho(r) from surface density I(R)
     # by inverting Abel's integral equation
-    rhom = -1/np.pi * np.array([quad(lambda u: np.interp(r*np.cosh(u), rad, np.gradient(sb,rad)), 0, np.inf)[0]
-                                for r in rad])
+    with np.errstate(over='ignore'):
+        rhom = -1/np.pi * np.array([quad(lambda u: np.interp(r*np.cosh(u), rad, np.gradient(sb,rad)), 0, np.inf)[0]
+                                    for r in rad])
 
     # mass profile
     mass = 4*np.pi * np.array([simpson((rad**2 * rhom)[rad<=R], rad[rad<=R]) for R in rad])
@@ -569,9 +573,10 @@ def vcbulge_ellip(rad, sb, q=0.99, inc=0.):
     geom_factor = np.sqrt(np.sin(np.radians(inc))**2 + np.cos(np.radians(inc))**2/q**2)
 
     # first get 3d density with Abel integral
-    rhom = np.array([-1/np.pi * geom_factor *
-                     quad(lambda u: np.interp(m*np.cosh(u), rad, np.gradient(sb,rad)), 0, np.inf)[0]
-                     for m in rad])
+    with np.errstate(over='ignore'):
+        rhom = np.array([-1/np.pi * geom_factor *
+                         quad(lambda u: np.interp(m*np.cosh(u), rad, np.gradient(sb,rad)), 0, np.inf)[0]
+                         for m in rad])
 
 
     # then get circular velocity
@@ -679,11 +684,19 @@ def vcbulge_sersic(rad, mtot, re, n, q=0.99, inc=0.):
     # checks on q and inc
     q, inc = check_q_inc(q, inc)
 
+    # ellipticity
     e=np.sqrt(1-q**2)
 
+    # geometric factor
+    # see Sec. 2.1 in Noordermeer (2008)
+    geom_factor = np.sqrt(np.sin(np.radians(inc))**2 + np.cos(np.radians(inc))**2/q**2)
+
+    # Sersic profile
     sers = sersic(mtot, re, n)
-    rhom = np.array([-1/np.pi * np.sqrt(np.sin(np.radians(inc))**2 + np.cos(np.radians(inc))**2/q**2) *
-                     quad(lambda u: sers.deriv(m*np.cosh(u)), 0, np.inf)[0] for m in rad])
+
+    with np.errstate(over='ignore'):
+        rhom = np.array([-1/np.pi * geom_factor *
+                         quad(lambda u: sers.deriv(m*np.cosh(u)), 0, np.inf)[0] for m in rad])
 
     v_circ = np.array([np.sqrt(4*np.pi*G_GRAV * q *
                                quad(lambda u: np.interp(R/e*np.sin(u), rad, rhom)*R**2/e**3*np.sin(u)**2,
