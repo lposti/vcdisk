@@ -12,7 +12,7 @@ __all__ = [
     'vcbulge_sersic',
     'sersic',
     'integrand',
-    'vc_thin_expdisk',
+    'vcdisk_thinexp',
 ]
 
 
@@ -356,7 +356,7 @@ def integrand(u, xi, r, smdisk, z0=0.3, rhoz='cosh', rhoz_args=None, flaring=Fal
     return 2/np.pi*np.sqrt(u/r*p) * (ellipk(p) - ellipe(p)) * drho_du
 
 
-def vc_thin_expdisk(r, md, rd):
+def vcdisk_thinexp(r, md, rd):
     r"""
     Circular velocity of an infinitely thin exponential disk.
     See [Freeman70]_, Eq. (10).
@@ -802,8 +802,7 @@ def check_q_inc(q, inc):
     if q>1.0:
         raise ValueError("q must be <1, can't do prolate bulges")
     if q==1.0:
-        print ("the spherical case q=1 is handled with vcbulge_sph:")
-        return vcbulge_sph(rad, sb)
+        raise ValueError("the spherical case q=1 is handled by calling vcbulge_sph")
 
     if inc<0.0 or inc>90.0:
         raise ValueError("the inclination in degrees must be 0 <= inc <= 90")
