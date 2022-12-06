@@ -10,6 +10,7 @@ version: 0.3.0
 * Added functions for the circular velocity of flattened Sersic profiles
 * Added common type check function
 * Added :py:class:`vcdisk.sersic` class for Sersic profiles
+* Added :py:func:`vcdisk.vcdisk_offplane` with method of [Cuddeford93]_
 
 version: 0.2.0
 --------------

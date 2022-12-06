@@ -8,6 +8,8 @@ API
 
    vcdisk
    integrand
+   vcdisk_offplane
+   integrand_offplane
    vcdisk_thinexp
    vcbulge_sph
    vcbulge_ellip

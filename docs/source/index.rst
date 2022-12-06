@@ -3,7 +3,7 @@
 
 A minimal python module to solve Poisson's equation in galactic disks.
 This is useful to compute i) the circular velocity of a **thick galaxy disk**
-with arbitrary surface density and vertical profiles, and ii) the circular
+with arbitrary surface density and vertical density profile, and ii) the circular
 velocity of a **flattened bulge** with arbitrary surface density.
 
 The ``vcdisk`` module is a compact toolbox indispensable for modelling

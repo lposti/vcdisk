@@ -382,15 +382,7 @@ def vcdisk_thinexp(r, md, rd):
     """
 
     # check rad
-    if type(r) is list: r = np.asarray(r)
-    if type(r) is np.ndarray:
-        pass
-    else:
-        raise TypeError("r must be a list or np.array")
-    if len(r)<1:
-        raise ValueError("r must be an array of size >1")
-    if np.isnan(np.sum(r)):
-        raise ValueError("there are NaNs in r. Maybe try with np.nan_to_num(r)")
+    r = check_rad(r, 'r')
 
     # check md, rd
     md = check_float(md, 'md')
@@ -765,6 +757,21 @@ class sersic():
         """
         return -self.Ie*self.bn/(self.n*self.re) * np.exp(-self.bn*((R/self.re)**(1/self.n)-1)) * (R/self.re)**(1/self.n-1.0)
 
+def check_rad(r, name='r'):
+    """
+    Type checks on the common input ``r``.
+    """
+    if type(r) is list: r = np.asarray(r)
+    if type(r) is np.ndarray:
+        pass
+    else:
+        raise TypeError(name+" must be a list or np.array")
+    if len(r)<1:
+        raise ValueError(name+" must be an array of size >1")
+    if np.isnan(np.sum(r)):
+        raise ValueError("there are NaNs in "+name+". Maybe try with np.nan_to_num("+name+")")
+
+    return r
 
 def check_rad_sb(rad, sb):
     """
@@ -821,3 +828,120 @@ def check_q_inc(q, inc):
         raise ValueError("the inclination in degrees must be 0 <= inc <= 90")
 
     return q, inc
+
+
+
+######################################################################################
+######################################################################################
+#
+# Below is an alternative implementation of the double integral to get the potential
+# Phi(R,z) of an axisymmetric disk. This follows eq. (27)-(28) of Cuddeford (1993)
+# https://articles.adsabs.harvard.edu/pdf/1993MNRAS.262.1076C
+# The derivation of the formula with K instead of Q_-1/2 is due to a transformation
+# of eq. (27) following Byrd & Friedman (1971), page 248 eq 560.01, which I found
+# in https://gitlab.com/iogiul/galpynamics/-/wikis/Potential-of-discs
+
+def vcdisk_offplane(rad, zs, rho_rz):
+    r"""
+    Circular velocity off the mid plane of a thick disk.
+
+    This uses Eq. (27)-(28) of [Cuddeford93]_ to compute the gravitational potential,
+    and the circular velocity, at any position :math:`(R,z)` of thick disk of
+    arbitrary density.
+
+    :param rad: array of radii in :math:`\rm kpc`.
+    :type rad: list or numpy.ndarray
+    :param zs: array of height above the plane in :math:`\rm kpc`.
+    :type zs: list or numpy.ndarray
+    :param rho_rz: array of surface densities in :math:`\rm M_\odot / kpc^2`.
+        Its shape must be ``rho_rz.shape == (len(zs), len(rad))``. If the
+        array is sampled from a function ``rho(R,z)``, then this can be obtained
+        with ``rho_rz = rho(rad, z[:, None])``.
+    :type rho_rz: list or numpy.ndarray
+    :return: array of :math:`V_{\rm disk}` velocities in :math:`\rm km/s`.
+    :rtype: numpy.ndarray
+
+    .. seealso::
+
+        :py:func:`vcdisk.vcdisk`
+
+    .. warning::
+
+        This function is not as accurate as :py:func:`vcdisk.vcdisk` on the disk
+        plane and it is currently under development.
+
+    References
+    ----------
+
+    .. [Cuddeford93] Cuddeford, 1993, MNRAS, 262, 1076. On the potentials of galactic discs. `https://doi.org/10.1093/mnras/262.4.1076 <https://doi.org/10.1093/mnras/262.4.1076>`_
+
+    Example
+    =======
+
+    >>> import numpy as np
+    >>> from vcdisk import vcdisk_offplane
+    >>> md, rd, z0 = 1e10, 1.0, 0.3                                               # mass, rd, z0
+    >>> rad = np.linspace(0.1, 40.0, 20)                                          # radii samples
+    >>> zs  = np.linspace(0.0, 3.0,  20)                                          # height samples
+    >>> rho = lambda R,z: md / (4*np.pi*rd**2*z0) * np.exp(-R/rd) * np.exp(-z/z0) # density in (R,z)
+    >>> rho_rz = rho(rad, zs[:,None])
+    >>> vcdisk_offplane(rad, zs, rho_rz)
+    array([[ 69.9369551 , 280.68843945, ..., 31.73661284,  31.67214993],
+            ...
+            [  4.19006384,  36.38315685, ..., 31.6072344 ,  31.55062705]])
+
+    """
+
+    # input checks
+    rad = check_rad(rad, 'rad')
+    zs  = check_rad(zs,  'zs')
+
+    if type(rho_rz) is list: rho_rz = np.asarray(rho_rz)
+    if type(rho_rz) is np.ndarray:
+        pass
+    else:
+        raise TypeError("rho_rz must be a list or np.array")
+
+    if rho_rz.shape != (len(rad), len(zs)):
+        raise TypeError("rho_rz have shape: rho_rz.shape == (len(rad), len(zs))")
+
+    phi = -4*G_GRAV * np.array([[1/np.sqrt(R) * simpson(simpson(integrand_offplane(rad, zs[:,None], rho_rz, R, z), rad), zs)
+                                 for R in rad] for z in zs])
+    v_circ = np.sqrt(rad*np.gradient(phi, rad, axis=1))
+
+    return v_circ
+
+
+def integrand_offplane(u, l, rho_ul, R, z):
+    r"""
+    Integrand function for the integral in :py:func:`vcdisk.vcdisk_offplane`.
+
+    :param u: radial variable of integration in :math:`\rm kpc`. Its shape
+        must be ``u.shape == (len(u),)``.
+    :type u: list or numpy.ndarray
+    :param l: vertical variable of integration in :math:`\rm kpc`. Its shape
+        must be ``l.shape == (len(l),1)``. This can be obtained from a standard
+        array as ``l[:,None]``.
+    :type l: list or numpy.ndarray
+    :param rho_rz: array of surface densities in :math:`\rm M_\odot / kpc^2`.
+        Its shape must be ``rho_rz.shape == (len(l), len(u))``. If the
+        array is sampled from a function ``rho(R,z)``, then this can be obtained
+        with ``rho_rz = rho(u, l[:, None])``.
+    :type rho_rz: list or numpy.ndarray
+    :param R: radius in :math:`\rm kpc` at which the potential is evaluated
+    :type R: float
+    :param z: height in :math:`\rm kpc` at which the potential is evaluated
+    :type z: float
+    :return: 2-D array of the potential integrand with shape ``(len(l), len(u))``.
+    :rtype: numpy.ndarray
+
+    .. seealso::
+
+        :py:func:`vcdisk.vcdisk_offplane`
+
+
+    """
+
+    y = 4*R*u / (R**2 + u**2 + 2*R*u + np.clip(z-l, 1e-6, None)**2)
+
+    return np.sqrt(u*y) * ellipk(np.sqrt(y)) * rho_ul
