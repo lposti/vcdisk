@@ -852,6 +852,10 @@ def vcbulge_sersic(rad, mtot, re, n, q=0.99, inc=0.):
     with np.errstate(over='ignore'):
         rhom = np.array([-1/np.pi * geom_factor *
                          quad(lambda u: sers.deriv(m*np.cosh(u)), 0, np.inf)[0] for m in rad])
+        # too large value of u may cause numerical overflow on cosh
+        if np.isnan(np.sum(rhom)):
+            rhom = np.array([-1/np.pi * geom_factor *
+                         quad(lambda u: sers.deriv(m*np.cosh(u)), 0, 50.0)[0] for m in rad])
 
     v_circ = np.array([np.sqrt(4*np.pi*G_GRAV * q *
                                quad(lambda u: np.interp(R/e*np.sin(u), rad, rhom)*R**2/e**3*np.sin(u)**2,
