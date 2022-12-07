@@ -81,8 +81,6 @@ def test_inputs():
     with pytest.raises(ValueError):
         vcbulge_ellip(rad, sb, q=2.0)
     with pytest.raises(ValueError):
-        vcbulge_ellip(rad, sb, q=1.0)
-    with pytest.raises(ValueError):
         vcbulge_ellip(rad, sb, inc=-1.0)
     with pytest.raises(ValueError):
         vcbulge_ellip(rad, sb, inc=180.0)
@@ -135,6 +133,7 @@ def test_output_type():
     #-- vcbulge_ellip
     assert type(vcbulge_ellip(rad, sb)) is np.ndarray
     assert type(vcbulge_ellip(rad, sb, q=0.9)) is np.ndarray
+    assert type(vcbulge_ellip(rad, sb, q=1.0)) is np.ndarray
     assert type(vcbulge_ellip(rad, sb, inc=60.0)) is np.ndarray
     assert type(vcbulge_ellip(rad, sb, q=0.9, inc=60.0)) is np.ndarray
 

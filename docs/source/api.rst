@@ -11,7 +11,7 @@ API
    vcdisk_offplane
    integrand_offplane
    vcdisk_thinexp
+   vcbulge
    vcbulge_sph
-   vcbulge_ellip
    vcbulge_sersic
    sersic

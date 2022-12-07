@@ -8,7 +8,7 @@
 __all__ = [
     'vcdisk',
     'vcbulge_sph',
-    'vcbulge_ellip',
+    'vcbulge',
     'vcbulge_sersic',
     'sersic',
     'integrand',
@@ -392,6 +392,154 @@ def vcdisk_thinexp(r, md, rd):
     return np.nan_to_num(np.sqrt(2*G_GRAV*md/rd*y**2*(i0(y)*k0(y)-i1(y)*k1(y))))
 
 
+def vcdisk_offplane(rad, zs, rho_rz):
+    r"""
+    Circular velocity off the mid plane of a thick disk.
+
+    This uses Eq. (27)-(28) of [Cuddeford93]_ to compute the gravitational potential,
+    and the circular velocity, at any position :math:`(R,z)` of thick disk of
+    arbitrary density.
+
+    :param rad: array of radii in :math:`\rm kpc`.
+    :type rad: list or numpy.ndarray
+    :param zs: array of height above the plane in :math:`\rm kpc`.
+    :type zs: list or numpy.ndarray
+    :param rho_rz: array of surface densities in :math:`\rm M_\odot / kpc^2`.
+        Its shape must be ``rho_rz.shape == (len(zs), len(rad))``. If the
+        array is sampled from a function ``rho(R,z)``, then this can be obtained
+        with ``rho_rz = rho(rad, z[:, None])``.
+    :type rho_rz: list or numpy.ndarray
+    :return: array of :math:`V_{\rm disk}` velocities in :math:`\rm km/s`.
+    :rtype: numpy.ndarray
+
+    .. seealso::
+
+        :py:func:`vcdisk.vcdisk`, `galpynamics <https://gitlab.com/iogiul/galpynamics>`_
+
+    .. warning::
+
+        This function is not as accurate as :py:func:`vcdisk.vcdisk` on the disk
+        plane and it is currently under development.
+
+    Notes
+    =====
+
+    This routine solves the integral in Eq. (27) of [Cuddeford93]_ to evaluate the
+    gravitational potential of a thick disk galaxy
+
+    .. math::
+
+        \Phi(R,z) = -\frac{2G}{\sqrt{R}} \int_{-\infty}^\infty {\rm d}l \int_0^\infty {\rm d}u\,\sqrt{u}\rho(u,l)\,Q_{-1/2}(x),
+
+    where :math:`Q_\lambda` is the Legendre function and
+
+    .. math::
+
+        x = \frac{R^2+u^2+(z-l)^2}{2Ru}.
+
+    From Eq. (560.01) in [ByrdFriedman71]_ we know that :math:`Q_{-1/2}(x) = y\,\mathcal{K}(y)`,
+    where :math:`\mathcal{K}` is the complete elliptic integral of the first kind and
+
+    .. math::
+        y^2 = \frac{2}{1+x} = \frac{4Ru}{R^2+u^2+2Ru+(z-l)^2}.
+
+    Thus we can write the potential as
+
+    .. math::
+
+        \Phi(R,z) = -\frac{2G}{\sqrt{R}} \int_{-\infty}^\infty {\rm d}l \int_0^\infty {\rm d}u\,\sqrt{u}\rho(u,l)\,y\,\mathcal{K}(y).
+
+    :py:func:`vcdisk.vcdisk_offplane` solves this integral to get a 2D array for the
+    gravitational potential in :math:`(R,z)` and then computes the circular velocity
+    of the disk as
+
+    .. math::
+
+        V_{\rm disk}(R,z) = \sqrt{R\left.\frac{\partial\Phi(R,z)}{\partial R}\right|_{z}}.
+
+    The double integral is computed with Simpson's method implemented in
+    :func:`scipy.integrate.simpson`.
+
+
+    References
+    ----------
+
+    .. [ByrdFriedman71] Byrd & Friedman, 1971, Springer-Verlag, Berlin. Handbook of Elliptic Integrals for Engineers and Scientists, 2nd Edition. `http://dx.doi.org/10.1007/978-3-642-65138-0 <http://dx.doi.org/10.1007/978-3-642-65138-0>`_
+    .. [Cuddeford93] Cuddeford, 1993, MNRAS, 262, 1076. On the potentials of galactic discs. `https://doi.org/10.1093/mnras/262.4.1076 <https://doi.org/10.1093/mnras/262.4.1076>`_
+
+    Example
+    =======
+
+    >>> import numpy as np
+    >>> from vcdisk import vcdisk_offplane
+    >>> md, rd, z0 = 1e10, 1.0, 0.3                                               # mass, rd, z0
+    >>> rad = np.linspace(0.1, 40.0, 20)                                          # radii samples
+    >>> zs  = np.linspace(0.0, 3.0,  20)                                          # height samples
+    >>> rho = lambda R,z: md / (4*np.pi*rd**2*z0) * np.exp(-R/rd) * np.exp(-z/z0) # density in (R,z)
+    >>> rho_rz = rho(rad, zs[:,None])
+    >>> vcdisk_offplane(rad, zs, rho_rz)
+    array([[ 69.9369551 , 280.68843945, ..., 31.73661284,  31.67214993],
+            ...
+            [  4.19006384,  36.38315685, ..., 31.6072344 ,  31.55062705]])
+
+    """
+
+    # input checks
+    rad = check_rad(rad, 'rad')
+    zs  = check_rad(zs,  'zs')
+
+    if type(rho_rz) is list: rho_rz = np.asarray(rho_rz)
+    if type(rho_rz) is np.ndarray:
+        pass
+    else:
+        raise TypeError("rho_rz must be a list or np.array")
+
+    if rho_rz.shape != (len(rad), len(zs)):
+        raise TypeError("rho_rz have shape: rho_rz.shape == (len(rad), len(zs))")
+
+    phi = -4*G_GRAV * np.array([[1/np.sqrt(R) * simpson(simpson(integrand_offplane(rad, zs[:,None], rho_rz, R, z), rad), zs)
+                                 for R in rad] for z in zs])
+    v_circ = np.sqrt(rad*np.gradient(phi, rad, axis=1))
+
+    return v_circ
+
+
+def integrand_offplane(u, l, rho_ul, R, z):
+    r"""
+    Integrand function for the integral in :py:func:`vcdisk.vcdisk_offplane`.
+
+    :param u: radial variable of integration in :math:`\rm kpc`. Its shape
+        must be ``u.shape == (len(u),)``.
+    :type u: list or numpy.ndarray
+    :param l: vertical variable of integration in :math:`\rm kpc`. Its shape
+        must be ``l.shape == (len(l),1)``. This can be obtained from a standard
+        array as ``l[:,None]``.
+    :type l: list or numpy.ndarray
+    :param rho_rz: array of surface densities in :math:`\rm M_\odot / kpc^2`.
+        Its shape must be ``rho_rz.shape == (len(l), len(u))``. If the
+        array is sampled from a function ``rho(R,z)``, then this can be obtained
+        with ``rho_rz = rho(u, l[:, None])``.
+    :type rho_rz: list or numpy.ndarray
+    :param R: radius in :math:`\rm kpc` at which the potential is evaluated
+    :type R: float
+    :param z: height in :math:`\rm kpc` at which the potential is evaluated
+    :type z: float
+    :return: 2-D array of the potential integrand with shape ``(len(l), len(u))``.
+    :rtype: numpy.ndarray
+
+    .. seealso::
+
+        :py:func:`vcdisk.vcdisk_offplane`
+
+
+    """
+
+    ysq = 4*R*u / (R**2 + u**2 + 2*R*u + np.clip(z-l, 1e-6, None)**2)
+
+    return np.sqrt(u*ysq) * ellipk(np.sqrt(ysq)) * rho_ul
+
+
+
 def vcbulge_sph(rad, sb):
     r"""
     Circular velocity of a spherical bulge of arbitrary surface density.
@@ -409,7 +557,7 @@ def vcbulge_sph(rad, sb):
 
     .. seealso::
 
-        :py:func:`vcdisk.vcbulge_ellip`
+        :py:func:`vcdisk.vcbulge`
 
     Notes
     =====
@@ -463,7 +611,7 @@ def vcbulge_sph(rad, sb):
 
 
 
-def vcbulge_ellip(rad, sb, q=0.99, inc=0.):
+def vcbulge(rad, sb, q=0.99, inc=0.):
     r"""
     Circular velocity of a spheroidal oblate bulge of arbitrary surface density.
 
@@ -543,6 +691,18 @@ def vcbulge_ellip(rad, sb, q=0.99, inc=0.):
     with :func:`scipy.integrate.quad` and the derivative of the input surface density
     profile :math:`I'` is discretized with :func:`numpy.gradient`.
 
+    .. warning::
+
+        With the current implementation using :func:`scipy.integrate.quad` this function
+        is considerably slower than :py:func:`vcdisk.vcdisk`, which instead computes
+        discretized integrals with :func:`scipy.integrate.simpson`.
+
+    .. warning::
+
+        The integral consistently results in a numerical overflow of ``cosh`` and
+        an IntegrationWarning on :func:`scipy.integrate.quad`. Thus these two warnings
+        have been suppressed.
+
 
     References
     ----------
@@ -555,6 +715,9 @@ def vcbulge_ellip(rad, sb, q=0.99, inc=0.):
     rad, sb = check_rad_sb(rad, sb)
 
     # checks on q and inc
+    if q==1.0:
+        print ("the spherical case q=1 is handled with vcbulge_sph")
+        return vcbulge_sph(rad, sb)
     q, inc = check_q_inc(q, inc)
 
     # intrinsic ellipticity
@@ -582,7 +745,7 @@ def vcbulge_sersic(rad, mtot, re, n, q=0.99, inc=0.):
     r"""
     Circular velocity of a flattened Sersic bulge.
 
-    This is the same as :py:func:`vcdisk.vcbulge_ellip`, but for an analytic
+    This is the same as :py:func:`vcdisk.vcbulge`, but for an analytic
     [Sersic68]_ surface density profile. The implementation follows Eq.s
     (10)-(14) in [Noordermeer08]_.
 
@@ -609,7 +772,7 @@ def vcbulge_sersic(rad, mtot, re, n, q=0.99, inc=0.):
 
     .. seealso::
 
-        :py:func:`vcdisk.vcbulge_ellip`, :py:func:`vcdisk.vcbulge_sph`, :py:class:`vcdisk.sersic`
+        :py:func:`vcdisk.vcbulge`, :py:func:`vcdisk.vcbulge_sph`, :py:class:`vcdisk.sersic`
 
     Notes
     =====
@@ -641,7 +804,7 @@ def vcbulge_sersic(rad, mtot, re, n, q=0.99, inc=0.):
 
         \mathcal{C} = \frac{4\,G q I_e\,b_n}{nR_e} \sqrt{\sin^2i+\frac{1}{q}\cos^2i}.
 
-    As in :py:func:`vcdisk.vcbulge_ellip`, it is convenient to change integration
+    As in :py:func:`vcdisk.vcbulge`, it is convenient to change integration
     variables since both integrals present singularities: :math:`u={\rm arccosh}{(R/m)}`
     is used for the inner integral in :math:`{\rm d}R`, while :math:`t=\arcsin{me/r}`
     is used for the outer integral in :math:`{\rm d}m`.
@@ -821,127 +984,8 @@ def check_q_inc(q, inc):
         raise ValueError("q must be positive")
     if q>1.0:
         raise ValueError("q must be <1, can't do prolate bulges")
-    if q==1.0:
-        raise ValueError("the spherical case q=1 is handled by calling vcbulge_sph")
 
     if inc<0.0 or inc>90.0:
         raise ValueError("the inclination in degrees must be 0 <= inc <= 90")
 
     return q, inc
-
-
-
-######################################################################################
-######################################################################################
-#
-# Below is an alternative implementation of the double integral to get the potential
-# Phi(R,z) of an axisymmetric disk. This follows eq. (27)-(28) of Cuddeford (1993)
-# https://articles.adsabs.harvard.edu/pdf/1993MNRAS.262.1076C
-# The derivation of the formula with K instead of Q_-1/2 is due to a transformation
-# of eq. (27) following Byrd & Friedman (1971), page 248 eq 560.01, which I found
-# in https://gitlab.com/iogiul/galpynamics/-/wikis/Potential-of-discs
-
-def vcdisk_offplane(rad, zs, rho_rz):
-    r"""
-    Circular velocity off the mid plane of a thick disk.
-
-    This uses Eq. (27)-(28) of [Cuddeford93]_ to compute the gravitational potential,
-    and the circular velocity, at any position :math:`(R,z)` of thick disk of
-    arbitrary density.
-
-    :param rad: array of radii in :math:`\rm kpc`.
-    :type rad: list or numpy.ndarray
-    :param zs: array of height above the plane in :math:`\rm kpc`.
-    :type zs: list or numpy.ndarray
-    :param rho_rz: array of surface densities in :math:`\rm M_\odot / kpc^2`.
-        Its shape must be ``rho_rz.shape == (len(zs), len(rad))``. If the
-        array is sampled from a function ``rho(R,z)``, then this can be obtained
-        with ``rho_rz = rho(rad, z[:, None])``.
-    :type rho_rz: list or numpy.ndarray
-    :return: array of :math:`V_{\rm disk}` velocities in :math:`\rm km/s`.
-    :rtype: numpy.ndarray
-
-    .. seealso::
-
-        :py:func:`vcdisk.vcdisk`
-
-    .. warning::
-
-        This function is not as accurate as :py:func:`vcdisk.vcdisk` on the disk
-        plane and it is currently under development.
-
-    References
-    ----------
-
-    .. [Cuddeford93] Cuddeford, 1993, MNRAS, 262, 1076. On the potentials of galactic discs. `https://doi.org/10.1093/mnras/262.4.1076 <https://doi.org/10.1093/mnras/262.4.1076>`_
-
-    Example
-    =======
-
-    >>> import numpy as np
-    >>> from vcdisk import vcdisk_offplane
-    >>> md, rd, z0 = 1e10, 1.0, 0.3                                               # mass, rd, z0
-    >>> rad = np.linspace(0.1, 40.0, 20)                                          # radii samples
-    >>> zs  = np.linspace(0.0, 3.0,  20)                                          # height samples
-    >>> rho = lambda R,z: md / (4*np.pi*rd**2*z0) * np.exp(-R/rd) * np.exp(-z/z0) # density in (R,z)
-    >>> rho_rz = rho(rad, zs[:,None])
-    >>> vcdisk_offplane(rad, zs, rho_rz)
-    array([[ 69.9369551 , 280.68843945, ..., 31.73661284,  31.67214993],
-            ...
-            [  4.19006384,  36.38315685, ..., 31.6072344 ,  31.55062705]])
-
-    """
-
-    # input checks
-    rad = check_rad(rad, 'rad')
-    zs  = check_rad(zs,  'zs')
-
-    if type(rho_rz) is list: rho_rz = np.asarray(rho_rz)
-    if type(rho_rz) is np.ndarray:
-        pass
-    else:
-        raise TypeError("rho_rz must be a list or np.array")
-
-    if rho_rz.shape != (len(rad), len(zs)):
-        raise TypeError("rho_rz have shape: rho_rz.shape == (len(rad), len(zs))")
-
-    phi = -4*G_GRAV * np.array([[1/np.sqrt(R) * simpson(simpson(integrand_offplane(rad, zs[:,None], rho_rz, R, z), rad), zs)
-                                 for R in rad] for z in zs])
-    v_circ = np.sqrt(rad*np.gradient(phi, rad, axis=1))
-
-    return v_circ
-
-
-def integrand_offplane(u, l, rho_ul, R, z):
-    r"""
-    Integrand function for the integral in :py:func:`vcdisk.vcdisk_offplane`.
-
-    :param u: radial variable of integration in :math:`\rm kpc`. Its shape
-        must be ``u.shape == (len(u),)``.
-    :type u: list or numpy.ndarray
-    :param l: vertical variable of integration in :math:`\rm kpc`. Its shape
-        must be ``l.shape == (len(l),1)``. This can be obtained from a standard
-        array as ``l[:,None]``.
-    :type l: list or numpy.ndarray
-    :param rho_rz: array of surface densities in :math:`\rm M_\odot / kpc^2`.
-        Its shape must be ``rho_rz.shape == (len(l), len(u))``. If the
-        array is sampled from a function ``rho(R,z)``, then this can be obtained
-        with ``rho_rz = rho(u, l[:, None])``.
-    :type rho_rz: list or numpy.ndarray
-    :param R: radius in :math:`\rm kpc` at which the potential is evaluated
-    :type R: float
-    :param z: height in :math:`\rm kpc` at which the potential is evaluated
-    :type z: float
-    :return: 2-D array of the potential integrand with shape ``(len(l), len(u))``.
-    :rtype: numpy.ndarray
-
-    .. seealso::
-
-        :py:func:`vcdisk.vcdisk_offplane`
-
-
-    """
-
-    y = 4*R*u / (R**2 + u**2 + 2*R*u + np.clip(z-l, 1e-6, None)**2)
-
-    return np.sqrt(u*y) * ellipk(np.sqrt(y)) * rho_ul
