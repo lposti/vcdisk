@@ -2,7 +2,7 @@
 Changelog
 =========
 
-version: 0.3.0
+version: 0.3.1
 --------------
 
 * quickfix in :py:class:`vcdisk.vcbulge_sersic` where overflow on cosh was causing NaNs
