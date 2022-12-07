@@ -13,7 +13,7 @@ observations, with minimal assumptions.
 
 :py:func:`~vcdisk.vcdisk` calculates the radial force on the disk plane of a
 thick disk component, with an arbitrarily sampled surface density profile and a
-user-defined vertical density profile. :py:func:`~vcdisk.vcbulge_ellip` computes
+user-defined vertical density profile. :py:func:`~vcdisk.vcbulge` computes
 the gravitational field on the mid-plane of an axisymmetric spheroidal oblate (or
 spherical) bulge component, with an arbitrarily sampled surface density profile.
 
